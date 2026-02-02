@@ -1,0 +1,335 @@
+{
+  "generated_at": "2026-02-02T12:26:47.374956",
+  "run_id": "1cc41367-e95c-4686-b4a7-98f690865869",
+  "dataset": {
+    "num_transactions": 438386,
+    "num_accounts": 7347,
+    "num_nodes": 7347,
+    "time_range": null,
+    "data_files": [
+      "node_embeddings_fg.csv",
+      "node_embeddings.csv",
+      "edges_td.csv",
+      "node_td.csv",
+      "alert_nodes_td.csv",
+      "transactions_fg.parquet",
+      "alert_nodes_fg.parquet",
+      "party_fg.parquet",
+      "node_embeddings_fg.parquet",
+      "alert_transactions_fg.parquet"
+    ]
+  },
+  "training": {
+    "epochs": null,
+    "final_loss": null,
+    "duration_seconds": 22.3567,
+    "model_path": "models/gan_anomaly_5f5ae592",
+    "model_files": [
+      "threshold.npy",
+      "metadata.json",
+      "anomaly_detector.keras"
+    ],
+    "threshold": 0.0001518621790494993
+  },
+  "anomalies": {
+    "threshold": 0.0001518621790494993,
+    "num_flagged": 816,
+    "anomaly_rate": 11.11,
+    "anomaly_rate_nodes_pct": 11.1066,
+    "anomalies_table_path": "data/alert_nodes_td.csv",
+    "top_k_preview": [
+      {
+        "id": "884db3a6",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "6c344249",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "d102552c",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "d056c787",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "e1c32180",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "434e0429",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "896eaf11",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "65258b7f",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "e67f35bf",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "1ec94ab9",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "3be0b75f",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "cbf42d34",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "7d09a812",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "2676f45e",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "17e498a6",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "562765c9",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "423311f7",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "f60c9ce7",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "5ab87ed1",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "de90e180",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "eac8b9c1",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "1df6e40c",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "ff87281a",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "6aacf1eb",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "64ffe866",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "147932b5",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "63eea904",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "5231c334",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "7582bc84",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "48df176d",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "a6e10c06",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "9d04cf26",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "bc199edf",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "eb9c1faf",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "b4117464",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "d7ec8c1d",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "8fab72e6",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "9f570713",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "971bf098",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "24a1360c",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "ab638a8a",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "83a6e182",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "6fdbe27b",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "7529dfe5",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "9f0ff6f7",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "fc046535",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "787f30cd",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "166e23c3",
+        "is_sar": 1,
+        "type": 0
+      },
+      {
+        "id": "f84efae6",
+        "is_sar": 1,
+        "type": 1
+      },
+      {
+        "id": "609a8bc5",
+        "is_sar": 1,
+        "type": 1
+      }
+    ],
+    "source_file": "data/alert_nodes_td.csv"
+  },
+  "embedding": {
+    "dim": 32,
+    "num_nodes": 7347,
+    "num_edges": 438386
+  },
+  "execution": {
+    "started_at": "2026-02-02T12:25:02.890945",
+    "completed_at": null,
+    "duration_seconds": null,
+    "steps_completed": 12,
+    "steps_failed": 0,
+    "status": "completed",
+    "key_plots_paths": [
+      "plots/dashboard_executive.png",
+      "plots/anomaly_distribution.png",
+      "plots/top_anomalies.png",
+      "plots/top_suspicious_by_volume.png",
+      "plots/transaction_network.png",
+      "plots/degree_distribution.png",
+      "plots/dashboard_loss_savings.png",
+      "plots/dashboard_node_profiles.png",
+      "plots/dashboard_risk_network.png",
+      "plots/dashboard_transaction_deepdive.png",
+      "plots/money_flow_comparison.png",
+      "plots/money_flow_network.png"
+    ]
+  },
+  "paths": {
+    "anomalies_table_path": "data/alert_nodes_td.csv",
+    "key_plots_paths": [
+      "plots/dashboard_executive.png",
+      "plots/anomaly_distribution.png",
+      "plots/top_anomalies.png",
+      "plots/top_suspicious_by_volume.png"
+    ],
+    "model_paths": {
+      "model": "models/gan_anomaly_5f5ae592/anomaly_detector.keras",
+      "threshold": "models/gan_anomaly_5f5ae592/threshold.npy",
+      "metadata": "models/gan_anomaly_5f5ae592/metadata.json"
+    }
+  }
+}

@@ -1,0 +1,202 @@
+Executing 2_prep_training_dataset_for_embeddings.ipynb with papermill
+Parameters: {
+  "run_id": "1cc41367-e95c-4686-b4a7-98f690865869",
+  "artifacts_dir": "/home/adnoman/projects/aml_gan/AMLend2end/artifacts/runs/1cc41367-e95c-4686-b4a7-98f690865869",
+  "sample_size": null,
+  "epochs": null,
+  "threshold": null
+}
+Timeout: 1800s
+--------------------------------------------------
+WARNING: Using incubator modules: jdk.incubator.vector
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/02/02 17:25:18 WARN Utils: Your hostname, destan-do, resolves to a loopback address: 127.0.1.1; using 10.255.255.254 instead (on interface lo)
+26/02/02 17:25:18 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+26/02/02 17:25:20 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Spark version: 4.1.1
+Loading feature groups from: /home/adnoman/projects/aml_gan/AMLend2end/output
+Saving training datasets to: /home/adnoman/projects/aml_gan/AMLend2end/training_data
+Loading feature groups from local parquet files (created by notebook 1)
++--------+--------+--------------+-------+-------+--------+
+|  source|  target|tran_timestamp|tran_id|tx_type|base_amt|
++--------+--------+--------------+-------+-------+--------+
+|3aa9646b|1e46e726|        Jan-01|    496|      4|  858.77|
+|49203bc3|a74d1101|        Jan-01|   1342|      4|  386.86|
+|616d4505|99af2455|        Jan-02|   1580|      4|  616.43|
+|39be1ea2|e7ec7bdb|        Jan-02|   2866|      4|  146.44|
+|e2e0d938|afc399a9|        Jan-03|   3997|      4|  439.09|
++--------+--------+--------------+-------+-------+--------+
+only showing top 5 rows
++--------+--------------+------+-------+
+|alert_id|    alert_type|is_sar|tran_id|
++--------+--------------+------+-------+
+|      47|gather_scatter|     1|  11873|
+|      47|gather_scatter|     1|  11874|
+|      47|gather_scatter|     1|  11875|
+|      47|gather_scatter|     1|  13151|
+|      47|gather_scatter|     1|  23148|
++--------+--------------+------+-------+
+only showing top 5 rows
++--------+----+
+|      id|type|
++--------+----+
+|5628bd6c|   0|
+|a1fcba39|   0|
+|f56c9501|   1|
+|9969afdd|   0|
+|b356eeae|   1|
+|3406706a|   0|
+|26c56102|   0|
+|e386ebf7|   1|
+|8c094b0d|   1|
+|939235aa|   1|
+|de6bf2a5|   0|
+|33a8ff5b|   0|
+|a32807a1|   1|
+|2906ef08|   0|
+|c2a01b8d|   1|
+|5a99160f|   1|
+|8b9017b8|   0|
+|fcf3bbf3|   1|
+|5132aa4d|   0|
+|68b90958|   1|
++--------+----+
+only showing top 20 rows
++--------+--------+-------+-------+--------+
+|  source|  target|tran_id|tx_type|base_amt|
++--------+--------+-------+-------+--------+
+|3aa9646b|1e46e726|    496|      4|  858.77|
+|49203bc3|a74d1101|   1342|      4|  386.86|
+|616d4505|99af2455|   1580|      4|  616.43|
+|39be1ea2|e7ec7bdb|   2866|      4|  146.44|
+|e2e0d938|afc399a9|   3997|      4|  439.09|
+|75c9a805|d7a317f6|   5518|      4|   361.0|
+|c14f4989|733a496b|   7340|      4|  768.98|
+|576eb672|aa49b0eb|   9376|      4|   943.4|
+|847a9cf6|b070a6bb|  10362|      4|   668.3|
+|12a388ff|586377aa|  10817|      4|  139.84|
+|b36f9c84|1b467848|  11317|      4|  499.47|
+|362e42e0|385afb8b|  11748|      4|  357.96|
+|572014da|acd60eca|  13285|      4|   630.9|
+|5ff2d9a7|31976e38|  14832|      4|  685.07|
+|24bf603c|fcf3bbf3|  15619|      4|  964.81|
+|9a118f8d|ca0967a6|  16574|      4|  919.76|
+|65b8a85f|bc0de3c7|  18944|      4|  302.26|
+|d7a317f6|31db9495|  19204|      4|  637.18|
+|95aac0c4|3a63a8fc|  19530|      4|  630.43|
+|5411dc34|f388cc0f|  20382|      4|  374.73|
++--------+--------+-------+-------+--------+
+only showing top 20 rows
+Saved edges training dataset to: /home/adnoman/projects/aml_gan/AMLend2end/training_data/edges_td.csv
++--------+----+
+|      id|type|
++--------+----+
+|5628bd6c|   0|
+|a1fcba39|   0|
+|f56c9501|   1|
+|9969afdd|   0|
+|b356eeae|   1|
+|3406706a|   0|
+|26c56102|   0|
+|e386ebf7|   1|
+|8c094b0d|   1|
+|939235aa|   1|
+|de6bf2a5|   0|
+|33a8ff5b|   0|
+|a32807a1|   1|
+|2906ef08|   0|
+|c2a01b8d|   1|
+|5a99160f|   1|
+|8b9017b8|   0|
+|fcf3bbf3|   1|
+|5132aa4d|   0|
+|68b90958|   1|
++--------+----+
+only showing top 20 rows
+Saved nodes training dataset to: /home/adnoman/projects/aml_gan/AMLend2end/training_data/node_td.csv
++--------+------+
+|      id|is_sar|
++--------+------+
+|33a8ff5b|     1|
+|43e028ef|     1|
+|fcf3bbf3|     1|
+|8b9017b8|     1|
+|9c187eed|     1|
+|65636b63|     1|
+|68c0230d|     1|
+|550a25ff|     1|
+|d73e5230|     1|
+|c0be245b|     1|
+|cdbd2ed5|     1|
+|963b978f|     1|
+|84563a83|     1|
+|da77c74b|     1|
+|840701de|     1|
+|dc37f73b|     1|
+|b0f4351c|     1|
+|dd2ebcf1|     1|
+|c29d75dc|     1|
+|d7c99aa5|     1|
++--------+------+
+only showing top 20 rows
++--------+------+
+|      id|is_sar|
++--------+------+
+|33a8ff5b|     1|
+|43e028ef|     1|
+|fcf3bbf3|     1|
+|8b9017b8|     1|
+|9c187eed|     1|
+|65636b63|     1|
+|68c0230d|     1|
+|550a25ff|     1|
+|d73e5230|     1|
+|c0be245b|     1|
+|cdbd2ed5|     1|
+|963b978f|     1|
+|84563a83|     1|
+|da77c74b|     1|
+|840701de|     1|
+|dc37f73b|     1|
+|b0f4351c|     1|
+|dd2ebcf1|     1|
+|c29d75dc|     1|
+|d7c99aa5|     1|
++--------+------+
+only showing top 20 rows
+26/02/02 17:25:27 WARN CacheManager: Asked to cache already cached data.
++--------+----+------+
+|      id|type|is_sar|
++--------+----+------+
+|5628bd6c|   0|     0|
+|a1fcba39|   0|     0|
+|f56c9501|   1|     0|
+|9969afdd|   0|     0|
+|b356eeae|   1|     0|
+|3406706a|   0|     0|
+|26c56102|   0|     0|
+|e386ebf7|   1|     0|
+|8c094b0d|   1|     0|
+|939235aa|   1|     0|
+|de6bf2a5|   0|     0|
+|33a8ff5b|   0|     1|
+|a32807a1|   1|     0|
+|2906ef08|   0|     0|
+|c2a01b8d|   1|     0|
+|5a99160f|   1|     0|
+|8b9017b8|   0|     1|
+|fcf3bbf3|   1|     1|
+|5132aa4d|   0|     0|
+|68b90958|   1|     0|
++--------+----+------+
+only showing top 20 rows
+Saved alert_nodes feature group to: /home/adnoman/projects/aml_gan/AMLend2end/output/alert_nodes_fg.parquet
+Saved alert_nodes training dataset to: /home/adnoman/projects/aml_gan/AMLend2end/training_data/alert_nodes_td.csv
+
+✓ All training datasets created!
+Spark session stopped - resources freed
+--------------------------------------------------
+Execution completed successfully

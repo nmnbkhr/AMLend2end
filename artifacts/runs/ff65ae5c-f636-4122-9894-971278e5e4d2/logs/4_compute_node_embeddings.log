@@ -1,0 +1,47 @@
+Executing 4_compute_node_embeddings.ipynb with papermill
+Parameters: {
+  "run_id": "ff65ae5c-f636-4122-9894-971278e5e4d2",
+  "artifacts_dir": "/home/adnoman/projects/aml_gan/AMLend2end/artifacts/runs/ff65ae5c-f636-4122-9894-971278e5e4d2",
+  "sample_size": null,
+  "epochs": null,
+  "threshold": null
+}
+Timeout: 1800s
+--------------------------------------------------
+Training data path: /home/adnoman/projects/aml_gan/AMLend2end/training_data
+Models will be saved to: /home/adnoman/projects/aml_gan/AMLend2end/models
+Loaded best hyperparameters: {'walk_number': 2, 'walk_length': 2, 'emb_size': 32}
+Loading training data...
+Nodes: 7347, Edges: 438386, Alert nodes: 7347
+
+Building NetworkX directed graph...
+Graph: 7347 nodes, 17070 edges
+Training Node2Vec with: walk_number=2, walk_length=2, emb_size=32
+Generating walks (CPU: 1):   0%|          | 0/1 [00:00<?, ?it/s]Generating walks (CPU: 1): 100%|██████████| 1/1 [00:00<00:00, 58.20it/s]
+Generating walks (CPU: 2):   0%|          | 0/1 [00:00<?, ?it/s]Generating walks (CPU: 2): 100%|██████████| 1/1 [00:00<00:00, 61.88it/s]
+Generating walks (CPU: 3): 0it [00:00, ?it/s]Generating walks (CPU: 3): 0it [00:00, ?it/s]
+Generating walks (CPU: 4): 0it [00:00, ?it/s]Generating walks (CPU: 4): 0it [00:00, ?it/s]
+
+Training Word2Vec on random walks...
+Training complete!
+Extracting node embeddings...
+Generated embeddings for 7347 nodes
+
+Embeddings shape: (7347, 33)
+Evaluating embeddings quality...
+Evaluation dataset: 7347 nodes
+
+Embedding Evaluation Accuracy: 0.8891
+Saved Node2Vec model to: /home/adnoman/projects/aml_gan/AMLend2end/models/node_embeddings_50d5b2b0/node2vec_model.model
+Saved classifier to: /home/adnoman/projects/aml_gan/AMLend2end/models/node_embeddings_50d5b2b0/classifier.joblib
+Saved embeddings to: /home/adnoman/projects/aml_gan/AMLend2end/models/node_embeddings_50d5b2b0/node_embeddings.csv
+Saved metadata to: /home/adnoman/projects/aml_gan/AMLend2end/models/node_embeddings_50d5b2b0/metadata.json
+
+Also saved embeddings to: /home/adnoman/projects/aml_gan/AMLend2end/training_data/node_embeddings.csv
+
+==================================================
+Model saved to: /home/adnoman/projects/aml_gan/AMLend2end/models/node_embeddings_50d5b2b0
+Accuracy: 0.8891
+==================================================
+--------------------------------------------------
+Execution completed successfully

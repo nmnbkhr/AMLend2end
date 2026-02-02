@@ -1,0 +1,13 @@
+{
+  "run_id": "1cc41367-e95c-4686-b4a7-98f690865869",
+  "generated_at": "2026-02-02 12:26:47 UTC",
+  "status": "Completed",
+  "metrics": {
+    "total_nodes": 7347,
+    "total_transactions": 438386,
+    "anomalies_detected": 816
+  },
+  "plots_count": 18,
+  "rules_count": 5,
+  "bundle_path": "report/run_bundle.zip"
+}

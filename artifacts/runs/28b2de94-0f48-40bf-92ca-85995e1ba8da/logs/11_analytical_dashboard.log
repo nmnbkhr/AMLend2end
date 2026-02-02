@@ -1,0 +1,71 @@
+Executing 11_analytical_dashboard.ipynb with papermill
+Parameters: {
+  "run_id": "28b2de94-0f48-40bf-92ca-85995e1ba8da",
+  "artifacts_dir": "/home/adnoman/projects/aml_gan/AMLend2end/artifacts/runs/28b2de94-0f48-40bf-92ca-85995e1ba8da",
+  "sample_size": null,
+  "epochs": null,
+  "threshold": null
+}
+Timeout: 1800s
+--------------------------------------------------
+2026-02-02 17:19:27.470733: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-02-02 17:19:27.504403: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-02-02 17:19:28.279099: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+Dashboard initialized!
+Interactive widgets available: True
+Loading data...
+  Transactions: 438,386
+  Nodes: 7,347
+  Node embeddings: 7,347
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1770034768.931241  139526 gpu_device.cc:2020] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 9511 MB memory:  -> device: 0, name: NVIDIA GeForce RTX 4080 Laptop GPU, pci bus id: 0000:01:00.0, compute capability: 8.9
+  Model loaded: gan_anomaly_6102bcd9
+2026-02-02 17:19:29.728110: I external/local_xla/xla/service/service.cc:163] XLA service 0x7735d8002840 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2026-02-02 17:19:29.728139: I external/local_xla/xla/service/service.cc:171]   StreamExecutor device (0): NVIDIA GeForce RTX 4080 Laptop GPU, Compute Capability 8.9
+2026-02-02 17:19:29.733328: I tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+2026-02-02 17:19:29.752901: I external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:473] Loaded cuDNN version 91801
+I0000 00:00:1770034770.135748  139775 device_compiler.h:196] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+
+Data loading complete!
+Edge risk and money flow data prepared!
+Loss/Savings analysis calculated!
+Network visualization: 34 nodes, 29 edges
+
+================================================================================
+ AML ANALYTICAL DASHBOARD - SUMMARY REPORT 
+================================================================================
+
+            DATASET OVERVIEW            
+----------------------------------------
+  Total Nodes:                     7,347
+  Total Transactions:            438,386
+  Total Value:              $242,434,979
+
+           DETECTION RESULTS            
+----------------------------------------
+  Anomalies Detected:              7,266
+  Detection Rate:                  98.9%
+  Suspicious Transactions:       438,369
+
+            FINANCIAL IMPACT            
+----------------------------------------
+  Suspicious Volume:        $242,425,884
+  Potential Loss Avoided:   $  4,063,786
+  Amount Recovered:         $  2,844,651
+  Operational Cost:         $  4,923,800
+  Net Savings:              $ -2,079,149
+
+         OUTPUT FILES GENERATED         
+----------------------------------------
+  - dashboard_executive.png
+  - dashboard_loss_savings.png
+  - dashboard_risk_network.png
+  - dashboard_transaction_deepdive.png
+  - dashboard_node_profiles.png
+
+================================================================================
+ DASHBOARD COMPLETE 
+================================================================================
+--------------------------------------------------
+Execution completed successfully

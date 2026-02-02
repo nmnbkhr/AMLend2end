@@ -1,0 +1,15 @@
+{
+  "hyperparameters": {
+    "latent_dim": 8,
+    "n_layers": 2,
+    "activation": "relu",
+    "dropout_rate": 0.0,
+    "learning_rate": 0.0001
+  },
+  "embedding_dim": 32,
+  "metrics": {
+    "auc": 0.511297575648469,
+    "optimal_threshold": 0.0001518621790494993,
+    "final_loss": 0.0002759908966254443
+  }
+}

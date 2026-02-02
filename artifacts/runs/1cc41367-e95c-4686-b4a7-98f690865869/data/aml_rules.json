@@ -1,0 +1,81 @@
+{
+  "generated_date": "2026-02-02T17:26:46.457976",
+  "total_nodes_analyzed": 7347,
+  "anomalies_detected": 7237,
+  "anomaly_threshold": 0.00015697844496052933,
+  "rules": [
+    {
+      "rule": "Max outgoing > $2,479",
+      "suspicious_rate": 1.0,
+      "description": "Very large single outgoing transaction",
+      "category": "AMOUNT"
+    },
+    {
+      "rule": "Total connections > 10",
+      "suspicious_rate": 1.0,
+      "pattern": "HUB / CENTRAL NODE",
+      "description": "Highly connected node acting as money hub",
+      "category": "NETWORK"
+    },
+    {
+      "rule": "Transaction velocity > 0.0001",
+      "suspicious_rate": 0.9918367346938776,
+      "pattern": "RAPID TRANSACTIONS",
+      "description": "High frequency of transactions in short period",
+      "category": "FREQUENCY"
+    },
+    {
+      "rule": "Total volume > $118,351",
+      "suspicious_rate": 0.9904761904761905,
+      "description": "High total transaction volume",
+      "category": "AMOUNT"
+    },
+    {
+      "rule": "Total transactions > 215",
+      "suspicious_rate": 0.9903713892709766,
+      "pattern": "HIGH ACTIVITY",
+      "description": "Unusually high number of transactions",
+      "category": "FREQUENCY"
+    },
+    {
+      "rule": "Receives from > 5 unique senders",
+      "suspicious_rate": 0.9903536977491961,
+      "pattern": "COLLECTION / AGGREGATION",
+      "description": "Receiving money from many sources (potential collection point)",
+      "category": "NETWORK"
+    },
+    {
+      "rule": "Avg transaction > $22,363",
+      "suspicious_rate": 0.9891156462585035,
+      "description": "Large average transaction size",
+      "category": "AMOUNT"
+    },
+    {
+      "rule": "Repeated txns to same target > 103",
+      "suspicious_rate": 0.9884057971014493,
+      "pattern": "REPETITIVE BEHAVIOR",
+      "description": "Multiple transactions to same recipient (potential structuring)",
+      "category": "FREQUENCY"
+    },
+    {
+      "rule": "Transaction std > $281",
+      "suspicious_rate": 0.9863945578231292,
+      "description": "High variance in amounts (inconsistent behavior)",
+      "category": "AMOUNT"
+    },
+    {
+      "rule": "Flow imbalance > 80%",
+      "suspicious_rate": 0.9851226377161239,
+      "pattern": "ONE-WAY FLOW",
+      "description": "Mostly sending OR receiving (not balanced like normal accounts)",
+      "category": "NETWORK"
+    },
+    {
+      "rule": "Sends to > 6 unique recipients",
+      "suspicious_rate": 0.9812646370023419,
+      "pattern": "STRUCTURING / LAYERING",
+      "description": "Sending money to many different accounts (potential smurfing)",
+      "category": "NETWORK"
+    }
+  ]
+}

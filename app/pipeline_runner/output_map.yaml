@@ -1,0 +1,152 @@
+# app/pipeline_runner/output_map.yaml
+# Deterministic output mapping for AML Pipeline artifacts
+# Used by artifacts_index.py and metrics_builder.py
+version: 1
+
+# Column name mappings (for flexible column detection)
+column_aliases:
+  id: ["id", "node_id", "account_id", "party_id"]
+  score: ["score", "anomaly_score", "risk_score", "prediction"]
+  is_sar: ["is_sar", "is_suspicious", "label", "is_anomaly"]
+  amount: ["amount", "total_amount", "volume", "tx_amount"]
+  degree: ["degree", "node_degree", "connections", "num_edges"]
+  risk: ["risk", "risk_level", "risk_category", "risk_score"]
+  type: ["type", "node_type", "account_type", "party_type"]
+
+# Preferred columns for top_k_preview (in priority order)
+preview_columns:
+  - "id"
+  - "is_sar"
+  - "score"
+  - "amount"
+  - "degree"
+  - "risk"
+  - "type"
+
+tables:
+  anomalies_primary:
+    description: "Primary anomalies table - alert_nodes_td.csv"
+    patterns:
+      - "data/alert_nodes_td.csv"
+    is_primary: true
+  anomalies_nodes:
+    description: "Alert nodes table (TD) - primary anomaly output"
+    patterns:
+      - "data/alert_nodes_td.csv"
+  anomalies_nodes_fg:
+    description: "Alert nodes feature-group table (FG)"
+    patterns:
+      - "data/alert_nodes_fg.parquet"
+  anomalies_transactions_fg:
+    description: "Alert transactions feature-group table (FG)"
+    patterns:
+      - "data/alert_transactions_fg.parquet"
+  node_embeddings:
+    description: "Node embeddings (CSV)"
+    patterns:
+      - "data/node_embeddings.csv"
+  node_embeddings_fg:
+    description: "Node embeddings feature group (CSV/Parquet)"
+    patterns:
+      - "data/node_embeddings_fg.csv"
+      - "data/node_embeddings_fg.parquet"
+  edges_td:
+    description: "Edges training dataset (TD)"
+    patterns:
+      - "data/edges_td.csv"
+  nodes_td:
+    description: "Nodes training dataset (TD)"
+    patterns:
+      - "data/node_td.csv"
+  transactions_fg:
+    description: "Transactions FG parquet"
+    patterns:
+      - "data/transactions_fg.parquet"
+  rules:
+    description: "AML detection rules JSON"
+    patterns:
+      - "data/aml_rules.json"
+
+plots:
+  executive:
+    description: "Executive dashboard overview"
+    patterns:
+      - "plots/dashboard_executive.png"
+  anomaly_distribution:
+    description: "Anomaly score / threshold distribution"
+    patterns:
+      - "plots/anomaly_distribution.png"
+  top_anomalies:
+    description: "Top anomalies visualization"
+    patterns:
+      - "plots/top_anomalies.png"
+  suspicious_volume:
+    description: "Top suspicious by volume"
+    patterns:
+      - "plots/top_suspicious_by_volume.png"
+  network:
+    description: "Transaction / risk network"
+    patterns:
+      - "plots/transaction_network.png"
+      - "plots/dashboard_risk_network.png"
+  pattern_summary:
+    description: "Pattern analysis summary"
+    patterns:
+      - "plots/pattern_summary.png"
+  all_png:
+    description: "All plots fallback"
+    patterns:
+      - "plots/*.png"
+
+models:
+  gan_detector:
+    description: "Trained GAN anomaly detector"
+    patterns:
+      - "models/gan_anomaly_*/anomaly_detector.keras"
+  gan_threshold:
+    description: "Saved threshold numpy"
+    patterns:
+      - "models/gan_anomaly_*/threshold.npy"
+  gan_metadata:
+    description: "Model metadata"
+    patterns:
+      - "models/gan_anomaly_*/metadata.json"
+
+report:
+  html:
+    patterns:
+      - "report/report.html"
+  meta:
+    patterns:
+      - "report/report_meta.json"
+
+logs:
+  patterns:
+    - "logs/*.log"
+
+notebooks_executed:
+  patterns:
+    - "notebooks_executed/*.ipynb"
+
+metrics:
+  patterns:
+    - "metrics/metrics.json"
+
+artifact_index:
+  patterns:
+    - "artifact_index.json"
+
+# Run bundle configuration (for zip export)
+bundle:
+  required:
+    - "metrics/metrics.json"
+    - "artifact_index.json"
+    - "report/report.html"
+  optional:
+    - "data/alert_nodes_td.csv"
+    - "plots/dashboard_executive.png"
+    - "plots/anomaly_distribution.png"
+    - "plots/top_anomalies.png"
+    - "plots/top_suspicious_by_volume.png"
+  include_logs: true
+  output_path: "report/run_bundle.zip"

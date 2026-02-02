@@ -1,0 +1,204 @@
+Executing 10_visualize_results.ipynb with papermill
+Parameters: {
+  "run_id": "1cc41367-e95c-4686-b4a7-98f690865869",
+  "artifacts_dir": "/home/adnoman/projects/aml_gan/AMLend2end/artifacts/runs/1cc41367-e95c-4686-b4a7-98f690865869",
+  "sample_size": null,
+  "epochs": null,
+  "threshold": null
+}
+Timeout: 1800s
+--------------------------------------------------
+2026-02-02 17:26:16.389385: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2026-02-02 17:26:16.419538: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-02-02 17:26:17.247818: I tensorflow/core/util/port.cc:153] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+Libraries loaded successfully!
+Loaded 438386 edges (transactions)
+Edge columns: ['source', 'target', 'tran_id', 'tx_type', 'base_amt']
+Loaded 7347 nodes (parties)
+Node columns: ['id', 'type']
+Loaded 7347 node embeddings
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1770035177.832891  153457 gpu_device.cc:2020] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 9511 MB memory:  -> device: 0, name: NVIDIA GeForce RTX 4080 Laptop GPU, pci bus id: 0000:01:00.0, compute capability: 8.9
+Model loaded from: /home/adnoman/projects/aml_gan/AMLend2end/models/gan_anomaly_f6ee3607
+Anomaly threshold: 0.000157
+2026-02-02 17:26:18.650976: I external/local_xla/xla/service/service.cc:163] XLA service 0x71035c0151e0 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2026-02-02 17:26:18.650999: I external/local_xla/xla/service/service.cc:171]   StreamExecutor device (0): NVIDIA GeForce RTX 4080 Laptop GPU, Compute Capability 8.9
+2026-02-02 17:26:18.655386: I tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+2026-02-02 17:26:18.673932: I external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:473] Loaded cuDNN version 91801
+I0000 00:00:1770035179.038662  153661 device_compiler.h:196] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+Anomaly scores computed!
+Score range: [0.000085, 0.000458]
+Threshold: 0.000157
+Graph Statistics:
+  Nodes: 7347
+  Edges: 17070
+  Density: 0.0003
+  Is connected: False
+  Number of connected components: 5
+Transaction Amount Statistics:
+==================================================
+Total transactions: 438,386
+Total transaction value: $242,434,979.01
+Average transaction: $553.02
+Median transaction: $549.36
+Min transaction: $43.32
+Max transaction: $2,995.02
+==================================================
+Money Flow Statistics:
+==================================================
+Total money volume: $242,434,979.01
+Avg volume per node: $65,995.64
+Max volume (single node): $452,657.49
+==================================================
+Money Flow Comparison: Anomalous vs Normal Nodes
+============================================================
+Metric                               Anomalous          Normal
+------------------------------------------------------------
+Node Count                               7,237             110
+Total Volume ($)                   478,033,092       6,836,866
+Avg Volume per Node ($)                 66,054          62,153
+Avg Transactions per Node                119.4           113.1
+Avg Outgoing ($)                        33,007          32,423
+Avg Incoming ($)                        33,047          29,730
+============================================================
+/tmp/ipykernel_153457/2618099287.py:21: MatplotlibDeprecationWarning: The 'labels' parameter of boxplot() has been renamed 'tick_labels' since Matplotlib 3.9; support for the old name will be dropped in 3.11.
+  bp1 = axes[0].boxplot([anomalous_money['total_volume'], normal_money['total_volume']],
+/tmp/ipykernel_153457/2618099287.py:29: MatplotlibDeprecationWarning: The 'labels' parameter of boxplot() has been renamed 'tick_labels' since Matplotlib 3.9; support for the old name will be dropped in 3.11.
+  bp2 = axes[1].boxplot([anomalous_money['total_transactions'], normal_money['total_transactions']],
+Top 20 Suspicious Nodes by Transaction Volume:
+================================================================================
+      id  is_sar  total_volume  outgoing_amt  incoming_amt  total_transactions  anomaly_score
+acd60eca       1     452657.49     157742.99     294914.50               830.0       0.000260
+bdc39a68       0     292824.40     102375.41     190448.99               514.0       0.000282
+53f24d0d       0     278756.55     112136.50     166620.05               495.0       0.000340
+fb1904f6       0     253570.47      64382.92     189187.55               455.0       0.000245
+e16513a0       0     252343.79      81579.36     170764.43               447.0       0.000237
+e67f35bf       1     249010.29      73083.21     175927.08               411.0       0.000212
+d195d055       0     248172.50      56284.56     191887.94               447.0       0.000195
+ae3db659       0     247879.20      73883.96     173995.24               451.0       0.000280
+c9b585a4       1     242782.31      77358.96     165423.35               413.0       0.000259
+70c0832b       0     241588.35      50993.64     190594.71               431.0       0.000375
+5cc91626       1     240474.30      29973.81     210500.49               442.0       0.000287
+f1e2963b       0     237915.77     100540.59     137375.18               437.0       0.000265
+261e862d       0     237837.47      76673.58     161163.89               433.0       0.000237
+80b50abc       1     232887.29      45628.58     187258.71               412.0       0.000317
+78bf8afb       1     227858.33      48998.65     178859.68               402.0       0.000298
+66e36266       0     225776.79      86780.37     138996.42               407.0       0.000180
+2f074149       0     224045.19          0.00     224045.19               411.0       0.000303
+3a96ae50       0     222654.66      54780.13     167874.53               411.0       0.000295
+8a6e7b86       0     220566.87      56929.59     163637.28               405.0       0.000256
+c3f6a8a8       0     220079.83      89268.65     130811.18               388.0       0.000297
+\nTotal money flowing through suspicious nodes: $239,016,546.10
+Money Flow Network Visualization:
+  Nodes: 97
+  Edges: 30
+
+Top 10 nodes by total degree:
+  acd60eca: 47
+  5cc91626: 31
+  6c19333b: 27
+  53f24d0d: 23
+  0ea0d658: 23
+  8a70f08a: 22
+  e6465074: 20
+  86687c66: 19
+  bca39b70: 18
+  b0fe7e18: 18
+/tmp/ipykernel_153457/1422505265.py:17: MatplotlibDeprecationWarning: The 'labels' parameter of boxplot() has been renamed 'tick_labels' since Matplotlib 3.9; support for the old name will be dropped in 3.11.
+  bp = axes[1].boxplot([sar_0, sar_1], labels=['Normal (is_sar=0)', 'SAR (is_sar=1)'], patch_artist=True)
+==================================================
+ANOMALY DETECTION SUMMARY
+==================================================
+Total nodes analyzed: 7347
+Anomalies detected:   7237 (98.5%)
+Normal nodes:         110 (1.5%)
+
+Anomaly threshold:    0.000157
+Mean anomaly score:   0.000265
+Median anomaly score: 0.000264
+Std anomaly score:    0.000053
+==================================================
+
+SAR Labels in data:   816
+SAR detected as anomaly: 811 (99.4%)
+Graph too large (7347 nodes), sampling 500 nodes...
+Visualization subgraph: 500 nodes, 464 edges
+Computing graph layout (this may take a moment)...
+Graph saved to: /home/adnoman/projects/aml_gan/AMLend2end/output/transaction_network.png
+Top 20 Most Anomalous Nodes:
+============================================================
+      id  is_sar  anomaly_score  is_anomaly
+10b33182       0       0.000458        True
+bd776e58       0       0.000457        True
+23d87fef       0       0.000453        True
+b91da37d       0       0.000450        True
+a6a98e30       0       0.000445        True
+9a90223f       0       0.000442        True
+41621e69       0       0.000440        True
+2d1772de       0       0.000435        True
+51b1cd26       0       0.000435        True
+90da97aa       0       0.000432        True
+7796eca6       0       0.000430        True
+7bc3cb1e       0       0.000429        True
+641897bb       0       0.000427        True
+ce6e768e       1       0.000426        True
+4905d75a       0       0.000425        True
+62c007f5       0       0.000423        True
+26b35462       0       0.000422        True
+6008bab6       0       0.000421        True
+82f07dae       0       0.000420        True
+e20e2f90       1       0.000420        True
+
+Subgraph around top anomaly '10b33182':
+  Nodes: 36
+  Edges: 36
+
+======================================================================
+ AML ANOMALY DETECTION - VISUALIZATION REPORT 
+======================================================================
+
+            Graph Statistics            
+----------------------------------------
+  Total Nodes:          7,347
+  Total Edges:          17,070
+  Graph Density:        0.000316
+  Avg Degree:           4.65
+
+      Transaction Value Statistics      
+----------------------------------------
+  Total Transactions:   438,386
+  Total Value:          $242,434,979.01
+  Average Transaction:  $553.02
+  Max Transaction:      $2,995.02
+
+       Anomaly Detection Results        
+----------------------------------------
+  Nodes Analyzed:       7,347
+  Anomalies Detected:   7,237 (98.5%)
+  Detection Threshold:  0.000157
+  Max Anomaly Score:    0.000458
+
+         Suspicious Money Flow          
+----------------------------------------
+  Suspicious Volume:    $239,016,546.10
+  % of Total Volume:    98.6%
+  Avg per Suspicious:   $66,054.04
+
+              Output Files              
+----------------------------------------
+  - degree_distribution.png
+  - anomaly_distribution.png
+  - transaction_network.png
+  - top_anomalies.png
+  - top_anomaly_neighborhood.png
+  - transaction_amounts.png
+  - money_flow_comparison.png
+  - top_suspicious_by_volume.png
+  - money_flow_network.png
+
+======================================================================
+ VISUALIZATION COMPLETE! 
+======================================================================
+--------------------------------------------------
+Execution completed successfully

@@ -1,0 +1,247 @@
+{
+  "generated_at": "2026-02-02T11:21:55.556522",
+  "run_id": "130b4b0c-059c-4a33-880b-6e04c41ce18c",
+  "dataset": {
+    "num_transactions": 438386,
+    "num_accounts": 7347,
+    "time_range": null,
+    "data_files": [
+      "node_embeddings_fg.csv",
+      "node_embeddings.csv",
+      "edges_td.csv",
+      "node_td.csv",
+      "alert_nodes_td.csv",
+      "transactions_fg.parquet",
+      "alert_nodes_fg.parquet",
+      "party_fg.parquet",
+      "node_embeddings_fg.parquet",
+      "alert_transactions_fg.parquet"
+    ]
+  },
+  "training": {
+    "epochs": null,
+    "final_loss": null,
+    "duration_seconds": 27.046443,
+    "model_path": "gan_anomaly_5f5ae592"
+  },
+  "anomalies": {
+    "threshold": 0.0001518621790494993,
+    "num_flagged": 816,
+    "anomaly_rate": 11.11,
+    "top_k_preview": [
+      {
+        "id": "a74d1101",
+        "is_sar": 1
+      },
+      {
+        "id": "99af2455",
+        "is_sar": 1
+      },
+      {
+        "id": "e7ec7bdb",
+        "is_sar": 1
+      },
+      {
+        "id": "c14f4989",
+        "is_sar": 1
+      },
+      {
+        "id": "576eb672",
+        "is_sar": 1
+      },
+      {
+        "id": "12a388ff",
+        "is_sar": 1
+      },
+      {
+        "id": "1b467848",
+        "is_sar": 1
+      },
+      {
+        "id": "acd60eca",
+        "is_sar": 1
+      },
+      {
+        "id": "5ff2d9a7",
+        "is_sar": 1
+      },
+      {
+        "id": "31976e38",
+        "is_sar": 1
+      },
+      {
+        "id": "fcf3bbf3",
+        "is_sar": 1
+      },
+      {
+        "id": "65b8a85f",
+        "is_sar": 1
+      },
+      {
+        "id": "95aac0c4",
+        "is_sar": 1
+      },
+      {
+        "id": "3a63a8fc",
+        "is_sar": 1
+      },
+      {
+        "id": "bce666b5",
+        "is_sar": 1
+      },
+      {
+        "id": "7f1ca1a9",
+        "is_sar": 1
+      },
+      {
+        "id": "78bf8afb",
+        "is_sar": 1
+      },
+      {
+        "id": "a027cb45",
+        "is_sar": 1
+      },
+      {
+        "id": "408c2657",
+        "is_sar": 1
+      },
+      {
+        "id": "72555c71",
+        "is_sar": 1
+      },
+      {
+        "id": "6c344249",
+        "is_sar": 1
+      },
+      {
+        "id": "011776ac",
+        "is_sar": 1
+      },
+      {
+        "id": "23a375f2",
+        "is_sar": 1
+      },
+      {
+        "id": "1fc9f9a4",
+        "is_sar": 1
+      },
+      {
+        "id": "6a61e612",
+        "is_sar": 1
+      },
+      {
+        "id": "d8474abd",
+        "is_sar": 1
+      },
+      {
+        "id": "fac68a3b",
+        "is_sar": 1
+      },
+      {
+        "id": "6c19333b",
+        "is_sar": 1
+      },
+      {
+        "id": "f9660357",
+        "is_sar": 1
+      },
+      {
+        "id": "d5c32e28",
+        "is_sar": 1
+      },
+      {
+        "id": "bca39b70",
+        "is_sar": 1
+      },
+      {
+        "id": "1c5ff0bf",
+        "is_sar": 1
+      },
+      {
+        "id": "8b387f8d",
+        "is_sar": 1
+      },
+      {
+        "id": "200cead7",
+        "is_sar": 1
+      },
+      {
+        "id": "8c34e813",
+        "is_sar": 1
+      },
+      {
+        "id": "81057ef7",
+        "is_sar": 1
+      },
+      {
+        "id": "a2deba83",
+        "is_sar": 1
+      },
+      {
+        "id": "fb80f973",
+        "is_sar": 1
+      },
+      {
+        "id": "5316063b",
+        "is_sar": 1
+      },
+      {
+        "id": "9bdca776",
+        "is_sar": 1
+      },
+      {
+        "id": "1fc7979d",
+        "is_sar": 1
+      },
+      {
+        "id": "d7b06383",
+        "is_sar": 1
+      },
+      {
+        "id": "91ac90a4",
+        "is_sar": 1
+      },
+      {
+        "id": "ad732204",
+        "is_sar": 1
+      },
+      {
+        "id": "d896fbd9",
+        "is_sar": 1
+      },
+      {
+        "id": "8f66b08c",
+        "is_sar": 1
+      },
+      {
+        "id": "f7e25630",
+        "is_sar": 1
+      },
+      {
+        "id": "eaceba9b",
+        "is_sar": 1
+      },
+      {
+        "id": "e6602e38",
+        "is_sar": 1
+      },
+      {
+        "id": "7c91e960",
+        "is_sar": 1
+      }
+    ]
+  },
+  "embedding": {
+    "dim": 32,
+    "num_nodes": 7347,
+    "num_edges": 438386
+  },
+  "execution": {
+    "started_at": "2026-02-02T11:19:59.632818",
+    "completed_at": null,
+    "duration_seconds": null,
+    "steps_completed": 12,
+    "steps_failed": 0,
+    "status": "completed"
+  }
+}

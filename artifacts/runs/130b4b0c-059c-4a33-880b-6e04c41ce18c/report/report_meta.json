@@ -1,0 +1,12 @@
+{
+  "run_id": "130b4b0c-059c-4a33-880b-6e04c41ce18c",
+  "generated_at": "2026-02-02 11:21:55 UTC",
+  "status": "Completed",
+  "metrics": {
+    "total_nodes": 7347,
+    "total_transactions": 438386,
+    "anomalies_detected": 816
+  },
+  "plots_count": 18,
+  "rules_count": 5
+}

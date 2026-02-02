@@ -1,0 +1,43 @@
+Executing 5_predict_and_create_node_embeddings_fg.ipynb with papermill
+Parameters: {
+  "run_id": "1cc41367-e95c-4686-b4a7-98f690865869",
+  "artifacts_dir": "/home/adnoman/projects/aml_gan/AMLend2end/artifacts/runs/1cc41367-e95c-4686-b4a7-98f690865869",
+  "sample_size": null,
+  "epochs": null,
+  "threshold": null
+}
+Timeout: 1800s
+--------------------------------------------------
+Training data: /home/adnoman/projects/aml_gan/AMLend2end/training_data
+Output: /home/adnoman/projects/aml_gan/AMLend2end/output
+Found model: /home/adnoman/projects/aml_gan/AMLend2end/models/node_embeddings_e2366de4
+Model metrics: {'accuracy': 0.8891156462585034}
+Hyperparameters: {'walk_number': 2, 'walk_length': 2, 'emb_size': 32}
+Loaded embeddings shape: (7347, 33)
+Embedding dimensions: 32
+Alert nodes: 7347
+SAR nodes: 816
+Final embeddings shape: (7347, 2)
+Embeddings with labels: (7347, 35)
+SAR nodes in embeddings: 816
+Sample of embeddings with SAR labels:
+Embedding statistics:
+  Total nodes: 7347
+  SAR nodes (is_sar=1): 816
+  Non-SAR nodes (is_sar=0): 6531
+  Embedding dimensions: 32
+Feature group shape: (7347, 34)
+Saved node embeddings feature group to: /home/adnoman/projects/aml_gan/AMLend2end/output/node_embeddings_fg.parquet
+Saved CSV version to: /home/adnoman/projects/aml_gan/AMLend2end/output/node_embeddings_fg.csv
+==================================================
+Node Embeddings Feature Group Created
+==================================================
+Total nodes: 7347
+Embedding dimensions: 32
+SAR nodes: 816
+Non-SAR nodes: 6531
+
+Saved to: /home/adnoman/projects/aml_gan/AMLend2end/output/node_embeddings_fg.parquet
+==================================================
+--------------------------------------------------
+Execution completed successfully

@@ -1,0 +1,12 @@
+{
+  "hyperparameters": {
+    "walk_number": 2,
+    "walk_length": 2,
+    "emb_size": 32
+  },
+  "metrics": {
+    "accuracy": 0.8891156462585034
+  },
+  "num_nodes": 7347,
+  "embedding_dim": 32
+}
