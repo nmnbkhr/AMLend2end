@@ -43,7 +43,7 @@ YELLOW := \033[0;33m
 CYAN := \033[0;36m
 NC := \033[0m
 
-.PHONY: run stop status redis api celery ui logs clean check-env help
+.PHONY: run stop status redis api celery ui logs clean check-env kill-orphans help
 
 help: ## Show this help
 	@echo ""
@@ -88,16 +88,37 @@ check-env: ## Check that all prerequisites are available
 	@echo ""
 
 # -------------------------------------------------------------------
+# Kill orphan processes from previous runs
+# -------------------------------------------------------------------
+kill-orphans: $(LOG_DIR) ## Kill orphan services and clean stale PID files
+	@echo "  Cleaning up orphan processes..."
+	@# Kill orphan processes on API port
+	@fuser -k $(API_PORT)/tcp 2>/dev/null && echo -e "    Killed orphan on port $(API_PORT)" || true
+	@# Kill orphan processes on UI port
+	@fuser -k $(UI_PORT)/tcp 2>/dev/null && echo -e "    Killed orphan on port $(UI_PORT)" || true
+	@# Kill orphan celery workers ([c] trick prevents pgrep matching itself)
+	@pgrep -f '[c]elery.*app.workers' 2>/dev/null | xargs -r kill -9 2>/dev/null \
+		&& echo -e "    Killed orphan Celery workers" || true
+	@# Kill orphan conda wrappers for this project
+	@pgrep -f '[c]onda run.*amlgan' 2>/dev/null | xargs -r kill -9 2>/dev/null \
+		&& echo -e "    Killed orphan conda wrappers" || true
+	@sleep 1
+	@# Clean stale PID files
+	@rm -f $(API_PID) $(CELERY_PID) $(UI_PID) $(REDIS_PID)
+	@echo -e "  $(GREEN)Cleanup done$(NC)"
+
+# -------------------------------------------------------------------
 # Individual services
 # -------------------------------------------------------------------
 redis: $(LOG_DIR) ## Start Redis server
-	@if [ -f $(REDIS_PID) ] && kill -0 $$(cat $(REDIS_PID)) 2>/dev/null; then \
-		echo -e "  $(YELLOW)Redis already running$(NC) (PID $$(cat $(REDIS_PID)))"; \
+	@if redis-cli ping 2>/dev/null | grep -q PONG; then \
+		echo -e "  $(YELLOW)Redis already running$(NC)"; \
 	else \
 		echo -n "  Starting Redis... "; \
-		redis-server --daemonize yes --pidfile $(REDIS_PID) --logfile $(REDIS_LOG) --port 6379; \
+		redis-server --daemonize yes --logfile $(REDIS_LOG) --port 6379; \
 		sleep 1; \
 		if redis-cli ping 2>/dev/null | grep -q PONG; then \
+			redis-cli info server 2>/dev/null | grep process_id | cut -d: -f2 | tr -d '[:space:]' > $(REDIS_PID); \
 			echo -e "$(GREEN)OK$(NC) (PID $$(cat $(REDIS_PID)))"; \
 		else \
 			echo -e "$(RED)FAILED$(NC) — check $(REDIS_LOG)"; \
@@ -132,9 +153,9 @@ celery: $(LOG_DIR) redis ## Start Celery worker (starts Redis first)
 		echo -e "  $(YELLOW)Celery already running$(NC) (PID $$(cat $(CELERY_PID)))"; \
 	else \
 		echo -n "  Starting Celery worker... "; \
+		rm -f $(CELERY_PID); \
 		cd $(PROJECT_DIR) && \
 		$(CONDA_RUN) celery -A app.workers.celery_app worker -l info \
-			--pidfile $(CELERY_PID) \
 			> $(CELERY_LOG) 2>&1 & \
 		echo $$! > $(CELERY_PID); \
 		sleep 3; \
@@ -174,6 +195,8 @@ ui: $(LOG_DIR) api ## Start Streamlit UI (starts API + Redis first)
 # All-in-one
 # -------------------------------------------------------------------
 run: check-env ## Start all services with confirmation at each step
+	@echo ""
+	@$(MAKE) --no-print-directory kill-orphans
 	@echo ""
 	@echo "  Starting AML Pipeline services..."
 	@echo "  =================================="
@@ -254,6 +277,11 @@ stop: ## Stop all services
 			echo -e "$(YELLOW)not running$(NC)"; \
 		fi; \
 	done
+	@# Also kill any orphan processes missed by PID files
+	@fuser -k $(API_PORT)/tcp 2>/dev/null && echo -e "  $(GREEN)Killed orphan on port $(API_PORT)$(NC)" || true
+	@fuser -k $(UI_PORT)/tcp 2>/dev/null && echo -e "  $(GREEN)Killed orphan on port $(UI_PORT)$(NC)" || true
+	@pgrep -f '[c]elery.*app.workers' 2>/dev/null | xargs -r kill -9 2>/dev/null \
+		&& echo -e "  $(GREEN)Killed orphan celery$(NC)" || true
 	@echo ""
 
 # -------------------------------------------------------------------
