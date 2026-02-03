@@ -844,8 +844,8 @@ def render_status_tab():
     with col4:
         st.metric("Current", status_data["current_step_name"][:18] + "..." if len(status_data["current_step_name"]) > 18 else status_data["current_step_name"])
 
-    # Progress bar
-    st.progress(status_data["progress_percent"] / 100)
+    # Progress bar (clamp to valid range 0.0–1.0)
+    st.progress(max(0.0, min(1.0, status_data["progress_percent"] / 100)))
 
     # Auto-refresh indicator for running jobs
     if status == "running":
@@ -1445,13 +1445,16 @@ def render_analytics_tab():
     selected_label = st.selectbox("Select Run", options=list(run_options.keys()), key="analytics_run_select")
     selected_run_id = run_options[selected_label]
 
-    # Build absolute paths to data files using path utilities
-    try:
-        data_dir = get_data_dir(selected_run_id)
+    # Resolve artifact path from the run record (handles SAML-D custom paths)
+    run_info = api_request("GET", f"/runs/{selected_run_id}")
+    if run_info and run_info.get("artifact_path"):
+        artifact_path = Path(run_info["artifact_path"])
+        if not artifact_path.is_absolute():
+            artifact_path = (get_repo_root() / artifact_path).resolve()
+        run_dir = artifact_path
+    else:
         run_dir = get_run_dir(selected_run_id)
-    except ValueError as e:
-        st.error(f"Invalid run ID: {e}")
-        return
+    data_dir = run_dir / "data"
 
     # Load data files
     alert_nodes_path = data_dir / "alert_nodes_td.csv"

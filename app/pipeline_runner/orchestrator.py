@@ -419,6 +419,7 @@ class PipelineOrchestrator:
 
     def _update_progress(self, step: int, name: str, percent: float):
         """Update progress via callback if available."""
+        percent = max(0.0, min(100.0, percent))
         if self.progress_callback:
             try:
                 self.progress_callback(step, name, percent)
@@ -553,10 +554,19 @@ class PipelineOrchestrator:
 
         # Copy training data files
         if training_data_dir.exists():
-            for data_file in training_data_dir.glob("*.csv"):
-                dest = self.data_dir / data_file.name
-                shutil.copy2(data_file, dest)
-                collected_files["data"].append(data_file.name)
+            for pattern in ["*.csv", "*.parquet"]:
+                for data_file in training_data_dir.glob(pattern):
+                    dest = self.data_dir / data_file.name
+                    shutil.copy2(data_file, dest)
+                    collected_files["data"].append(data_file.name)
+
+            # Copy GAN training data subdirectory
+            gan_dir = training_data_dir / "gan"
+            if gan_dir.exists():
+                dest_gan = self.data_dir / "gan"
+                if not dest_gan.exists():
+                    shutil.copytree(gan_dir, dest_gan)
+                collected_files["data"].append("gan/")
 
         # Copy model artifacts
         if models_dir.exists():
