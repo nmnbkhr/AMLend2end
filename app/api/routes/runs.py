@@ -31,6 +31,8 @@ ARTIFACTS_ROOT = get_artifacts_root()
 class RunParams(BaseModel):
     """Parameters for starting a pipeline run"""
     profile: str = Field(default="standard", description="Run profile: quick, standard, heavy")
+    data_source: str = Field(default="demo-data", description="Data source: demo-data or saml-d")
+    data_path: Optional[str] = Field(default=None, description="Custom data path override")
     sample_size: Optional[int] = Field(default=None, description="Override sample size")
     epochs: Optional[int] = Field(default=None, description="Override epochs")
     threshold: Optional[float] = Field(default=None, description="Override anomaly threshold")

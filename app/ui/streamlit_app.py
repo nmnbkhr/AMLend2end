@@ -683,6 +683,32 @@ def render_run_tab():
     if selected_profile == "heavy":
         st.warning("**Heavy profile requires 12GB+ VRAM.** Make sure your system has sufficient resources.")
 
+    # Data source selection
+    st.divider()
+    st.subheader("Data Source")
+
+    data_source = st.radio(
+        "Select dataset",
+        options=["demo-data", "saml-d"],
+        format_func=lambda x: {
+            "demo-data": "Demo Data  —  local demodata/ (small synthetic dataset)",
+            "saml-d": "SAML-D  —  /mnt/e/xx/demodata/ (9.5M real transactions)",
+        }[x],
+        horizontal=True,
+        key="data_source_select",
+    )
+
+    custom_data_path = None
+    with st.expander("Custom data path (optional)"):
+        custom_data_path = st.text_input(
+            "Override data path",
+            value="",
+            placeholder="/path/to/your/demodata/",
+            help="Leave empty to use the default path for the selected data source",
+        )
+        if custom_data_path:
+            st.info(f"Custom path: `{custom_data_path}`")
+
     # Additional options
     st.divider()
     st.subheader("Additional Options")
@@ -717,11 +743,16 @@ def render_run_tab():
         with st.spinner("Starting pipeline run..."):
             params = {
                 "profile": selected_profile,
+                "data_source": data_source,
                 "skip_hyperparameter_tuning": skip_hp,
                 "generate_visualizations": gen_viz,
                 "generate_report": gen_report,
                 "notebook_timeout": custom_timeout,
             }
+
+            # Add data path override if specified
+            if custom_data_path:
+                params["data_path"] = custom_data_path
 
             # Add custom overrides if specified
             if custom_sample:
@@ -927,11 +958,14 @@ def render_dashboard_tab():
         status = run_info.get("status", "unknown") if run_info else "unknown"
         emoji = get_status_emoji(status)
         status_color = "#22D3EE" if status == "running" else "#00C853" if status == "completed" else "#FF5252" if status == "failed" else "#FFB000"
+        run_params = run_info.get("params", {}) if run_info else {}
+        ds_label = run_params.get("data_source", "demo-data").upper()
         st.markdown(f"""
         <div class="mt-card" style="text-align: center;">
             <div style="font-size: 2rem;">{emoji}</div>
             <div class="mt-kpi" style="color: {status_color};">{status.upper()}</div>
             <div class="mt-title">Status</div>
+            <div class="mt-sub">Dataset: {ds_label}</div>
         </div>
         """, unsafe_allow_html=True)
 

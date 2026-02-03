@@ -385,8 +385,18 @@ class PipelineOrchestrator:
         self.generate_viz = self.params.get("generate_visualizations", True)
         self.generate_report = self.params.get("generate_report", True)
 
+        # Data source configuration
+        self.data_source = self.params.get("data_source", "demo-data")
+        self.data_path = self.params.get("data_path")
+        if not self.data_path:
+            if self.data_source == "saml-d":
+                self.data_path = "/mnt/e/xx/demodata"
+            else:
+                self.data_path = str(self.project_root / "demodata")
+
         logger.info(f"Run parameters: sample_size={self.sample_size}, epochs={self.epochs}, "
-                    f"threshold={self.threshold}, timeout={self.notebook_timeout}s")
+                    f"threshold={self.threshold}, timeout={self.notebook_timeout}s, "
+                    f"data_source={self.data_source}, data_path={self.data_path}")
 
     def _setup_artifact_dirs(self):
         """Create the artifact directory structure for this run."""
@@ -431,6 +441,7 @@ class PipelineOrchestrator:
             "sample_size": self.sample_size,
             "epochs": self.epochs,
             "threshold": self.threshold,
+            "data_path": self.data_path,
         }
 
     def _execute_notebook(self, step: Dict[str, Any]) -> Dict[str, Any]:
