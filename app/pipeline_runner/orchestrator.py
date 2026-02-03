@@ -87,6 +87,12 @@ def discover_notebooks(project_root: Path) -> List[Dict[str, Any]]:
             number = int(match.group(1))
             name_part = match.group(2).replace("_", " ").title()
 
+            # Skip notebook 0 (SAML-D mapping) — one-time data prep utility.
+            # Skip notebook 13 (interactive dashboard) — standalone app,
+            # not a pipeline step. It reads from completed run artifacts.
+            if number in (0, 13):
+                continue
+
             # Determine if step is optional (HP tuning steps)
             is_optional = "maggy" in nb_file.name.lower() or "hp" in name_part.lower()
 
@@ -370,6 +376,9 @@ class PipelineOrchestrator:
 
     def _extract_params(self):
         """Extract and validate run parameters."""
+        # Strip None values so profile defaults can apply
+        self.params = {k: v for k, v in self.params.items() if v is not None}
+
         # Apply profile if specified
         profile = self.params.get("profile", "standard")
         if profile in RUN_PROFILES:
@@ -509,74 +518,43 @@ class PipelineOrchestrator:
 
     def _collect_outputs(self):
         """
-        Collect outputs from the existing output directories.
+        Organize outputs within the artifact directory.
 
-        Copies relevant files to the run's artifact directory.
+        Notebooks write all outputs (data, PNGs, models) directly to
+        artifacts_dir/data/ and artifacts_dir/models/ via the injected
+        artifacts_dir parameter. This method moves PNGs from data/ to
+        plots/ for the UI. It does NOT copy from local project directories
+        (output/, training_data/, models/) to avoid overwriting run-specific
+        results with stale data from previous runs.
         """
         logger.info("Collecting pipeline outputs...")
 
-        # Source directories from existing pipeline
-        output_dir = self.project_root / "output"
-        models_dir = self.project_root / "models"
-        training_data_dir = self.project_root / "training_data"
-
         collected_files = {"plots": [], "data": [], "models": []}
 
-        # Copy visualizations
-        if output_dir.exists():
-            for img_file in output_dir.glob("*.png"):
-                dest = self.plots_dir / img_file.name
-                shutil.copy2(img_file, dest)
-                collected_files["plots"].append(img_file.name)
-                logger.debug(f"Collected plot: {img_file.name}")
+        # Move PNGs from data_dir to plots_dir (notebooks write them to OUTPUT_PATH = data/)
+        for img_file in self.data_dir.glob("*.png"):
+            dest = self.plots_dir / img_file.name
+            shutil.move(str(img_file), str(dest))
+            collected_files["plots"].append(img_file.name)
+            logger.debug(f"Moved plot to plots/: {img_file.name}")
 
-            for img_file in output_dir.glob("*.jpg"):
-                dest = self.plots_dir / img_file.name
-                shutil.copy2(img_file, dest)
-                collected_files["plots"].append(img_file.name)
+        for img_file in self.data_dir.glob("*.jpg"):
+            dest = self.plots_dir / img_file.name
+            shutil.move(str(img_file), str(dest))
+            collected_files["plots"].append(img_file.name)
 
-            # Copy data files
-            for data_file in output_dir.glob("*.parquet"):
-                dest = self.data_dir / data_file.name
-                shutil.copy2(data_file, dest)
-                collected_files["data"].append(data_file.name)
+        # Count data files already in artifacts
+        for data_file in self.data_dir.glob("*.parquet"):
+            collected_files["data"].append(data_file.name)
+        for data_file in self.data_dir.glob("*.csv"):
+            collected_files["data"].append(data_file.name)
+        for json_file in self.data_dir.glob("*.json"):
+            collected_files["data"].append(json_file.name)
 
-            for data_file in output_dir.glob("*.csv"):
-                dest = self.data_dir / data_file.name
-                shutil.copy2(data_file, dest)
-                collected_files["data"].append(data_file.name)
-
-            # Copy JSON files
-            for json_file in output_dir.glob("*.json"):
-                dest = self.data_dir / json_file.name
-                shutil.copy2(json_file, dest)
-                collected_files["data"].append(json_file.name)
-
-        # Copy training data files
-        if training_data_dir.exists():
-            for pattern in ["*.csv", "*.parquet"]:
-                for data_file in training_data_dir.glob(pattern):
-                    dest = self.data_dir / data_file.name
-                    shutil.copy2(data_file, dest)
-                    collected_files["data"].append(data_file.name)
-
-            # Copy GAN training data subdirectory
-            gan_dir = training_data_dir / "gan"
-            if gan_dir.exists():
-                dest_gan = self.data_dir / "gan"
-                if not dest_gan.exists():
-                    shutil.copytree(gan_dir, dest_gan)
-                collected_files["data"].append("gan/")
-
-        # Copy model artifacts
-        if models_dir.exists():
-            for model_dir in models_dir.glob("gan_anomaly_*"):
-                if model_dir.is_dir():
-                    dest = self.models_dir / model_dir.name
-                    if not dest.exists():
-                        shutil.copytree(model_dir, dest)
-                    collected_files["models"].append(model_dir.name)
-                    logger.debug(f"Collected model: {model_dir.name}")
+        # Count model artifacts already in artifacts
+        for model_dir in self.models_dir.glob("gan_anomaly_*"):
+            if model_dir.is_dir():
+                collected_files["models"].append(model_dir.name)
 
         logger.info(f"Output collection complete: {len(collected_files['plots'])} plots, "
                     f"{len(collected_files['data'])} data files, {len(collected_files['models'])} models")
@@ -586,6 +564,8 @@ class PipelineOrchestrator:
     def _parse_results(self) -> Dict[str, Any]:
         """
         Parse results from pipeline outputs to extract summary metrics.
+
+        Only reads from the run's artifact directory — no local fallbacks.
         """
         results = {
             "total_nodes": None,
@@ -594,10 +574,8 @@ class PipelineOrchestrator:
         }
 
         try:
-            # Try to read node embeddings to get node count
+            # Read node embeddings from artifact dir
             embeddings_file = self.data_dir / "node_embeddings_fg.parquet"
-            if not embeddings_file.exists():
-                embeddings_file = self.project_root / "output" / "node_embeddings_fg.parquet"
 
             if embeddings_file.exists():
                 import pandas as pd
@@ -608,20 +586,16 @@ class PipelineOrchestrator:
                 if "is_sar" in df.columns:
                     results["anomalies_detected"] = int(df["is_sar"].sum())
                 elif "anomaly_score" in df.columns:
-                    # Use threshold from model if available
+                    # Use threshold from model in artifact dir only
                     thresholds = list(self.models_dir.glob("*/threshold.npy"))
-                    if not thresholds:
-                        thresholds = list(self.project_root.glob("models/gan_anomaly_*/threshold.npy"))
 
                     if thresholds:
                         import numpy as np
                         threshold = np.load(thresholds[0])
                         results["anomalies_detected"] = int((df["anomaly_score"] > threshold).sum())
 
-            # Get transaction count from edges file
+            # Get transaction count from edges file in artifact dir
             edges_file = self.data_dir / "edges_td.csv"
-            if not edges_file.exists():
-                edges_file = self.project_root / "training_data" / "edges_td.csv"
 
             if edges_file.exists():
                 import pandas as pd

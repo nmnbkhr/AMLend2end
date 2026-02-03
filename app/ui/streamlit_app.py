@@ -5,7 +5,9 @@ A single-page application with tabs for:
 - Run: Start new pipeline runs with profile selection
 - Status: Monitor running/completed jobs with auto-refresh
 - Dashboard: View visualizations, metrics, and anomaly data
+- Analytics: Interactive Plotly charts from run data
 - Report: Access and download generated reports
+- Interactive: Full interactive dashboard with 5 analysis sub-tabs
 
 Run with: streamlit run app/ui/streamlit_app.py
 """
@@ -1858,6 +1860,506 @@ def render_analytics_tab():
             st.text(f"  {status} {fname}")
 
 
+# --- Interactive Dashboard Tab ---
+
+def render_interactive_dashboard_tab():
+    """Render the Interactive Dashboard tab — Plotly charts from completed run artifacts."""
+    st.header("Interactive Dashboard")
+
+    # ── Run selector (same pattern as analytics tab) ──
+    runs = api_request("GET", "/runs/?limit=15")
+    if not runs:
+        st.info("No pipeline runs found. Start a new run from the Run tab.")
+        return
+
+    completed_runs = [r for r in runs if r["status"] == "completed"]
+    if not completed_runs:
+        st.info("No completed runs found. Complete a pipeline run first.")
+        return
+
+    run_options = {
+        f"{r['id'][:8]}... - {r.get('params', {}).get('data_source', 'demo-data')} - {format_datetime(r.get('completed_at') or r['created_at'])}": r["id"]
+        for r in completed_runs
+    }
+
+    selected_label = st.selectbox("Select Run", options=list(run_options.keys()), key="idash_run_select")
+    selected_run_id = run_options[selected_label]
+
+    # ── Resolve artifact paths ──
+    run_info = api_request("GET", f"/runs/{selected_run_id}")
+    if run_info and run_info.get("artifact_path"):
+        artifact_path = Path(run_info["artifact_path"])
+        if not artifact_path.is_absolute():
+            artifact_path = (get_repo_root() / artifact_path).resolve()
+        run_dir = artifact_path
+    else:
+        run_dir = get_run_dir(selected_run_id)
+    data_dir = run_dir / "data"
+    models_dir = run_dir / "models"
+
+    data_source = run_info.get("params", {}).get("data_source", "demo-data") if run_info else "demo-data"
+
+    # ── Validate required files ──
+    edges_path = data_dir / "edges_td.csv"
+    nodes_path = data_dir / "node_td.csv"
+    embeddings_path = data_dir / "node_embeddings_fg.parquet"
+
+    missing = []
+    if not edges_path.exists():
+        missing.append("edges_td.csv")
+    if not embeddings_path.exists():
+        missing.append("node_embeddings_fg.parquet")
+    if missing:
+        st.warning(f"Missing required files in `{data_dir}`: {', '.join(missing)}")
+        return
+
+    model_dirs = sorted([d for d in models_dir.iterdir() if d.is_dir() and d.name.startswith("gan_anomaly_")]) if models_dir.exists() else []
+    if not model_dirs:
+        st.warning(f"No trained model found in `{models_dir}`")
+        return
+
+    # ── Load data ──
+    with st.spinner("Loading run data..."):
+        edges_df = pd.read_csv(edges_path)
+        nodes_df = pd.read_csv(nodes_path) if nodes_path.exists() else None
+        node_embeddings = pd.read_parquet(embeddings_path)
+
+        latest_model_dir = model_dirs[-1]
+        threshold_val = float(np.load(latest_model_dir / "threshold.npy"))
+
+        # Compute anomaly scores
+        emb_cols = [c for c in node_embeddings.columns if c.startswith("emb_")]
+        from tensorflow import keras
+        model = keras.models.load_model(str(latest_model_dir / "anomaly_detector.keras"))
+        all_embeddings = node_embeddings[emb_cols].values
+        reconstructed = model.predict(all_embeddings, verbose=0)
+        anomaly_scores = np.mean(np.square(all_embeddings - reconstructed), axis=1)
+
+        node_embeddings["anomaly_score"] = anomaly_scores
+        node_embeddings["is_anomaly"] = anomaly_scores > threshold_val
+        score_min, score_max = anomaly_scores.min(), anomaly_scores.max()
+        node_embeddings["risk_score"] = (anomaly_scores - score_min) / (score_max - score_min) if score_max > score_min else 0.0
+
+        # Map risk onto edges
+        node_risk_dict = node_embeddings.set_index("id")["risk_score"].to_dict()
+        node_anomaly_dict = node_embeddings.set_index("id")["is_anomaly"].to_dict()
+
+        edges_df["source_risk"] = edges_df["source"].map(node_risk_dict).fillna(0)
+        edges_df["target_risk"] = edges_df["target"].map(node_risk_dict).fillna(0)
+        edges_df["edge_risk"] = edges_df[["source_risk", "target_risk"]].max(axis=1)
+        edges_df["source_anomaly"] = edges_df["source"].map(node_anomaly_dict).fillna(False)
+        edges_df["target_anomaly"] = edges_df["target"].map(node_anomaly_dict).fillna(False)
+        edges_df["is_suspicious"] = edges_df["source_anomaly"] | edges_df["target_anomaly"]
+
+        # Money flow per node
+        outgoing = edges_df.groupby("source").agg({"base_amt": "sum", "tran_id": "count"}).rename(
+            columns={"base_amt": "outgoing_amt", "tran_id": "outgoing_count"})
+        incoming = edges_df.groupby("target").agg({"base_amt": "sum", "tran_id": "count"}).rename(
+            columns={"base_amt": "incoming_amt", "tran_id": "incoming_count"})
+
+        node_money = node_embeddings[["id", "anomaly_score", "is_anomaly", "risk_score"]].copy()
+        if "is_sar" in node_embeddings.columns:
+            node_money["is_sar"] = node_embeddings["is_sar"]
+        node_money = node_money.merge(outgoing, left_on="id", right_index=True, how="left")
+        node_money = node_money.merge(incoming, left_on="id", right_index=True, how="left")
+        node_money = node_money.fillna(0)
+        node_money["total_volume"] = node_money["outgoing_amt"] + node_money["incoming_amt"]
+        node_money["total_transactions"] = node_money["outgoing_count"] + node_money["incoming_count"]
+        node_money["net_flow"] = node_money["incoming_amt"] - node_money["outgoing_amt"]
+
+        if nodes_df is not None:
+            node_type_dict = nodes_df.set_index("id")["type"].to_dict()
+            node_money = node_money.merge(nodes_df[["id", "type"]], on="id", how="left")
+            edges_df["source_type"] = edges_df["source"].map(node_type_dict).fillna(-1).astype(int)
+            edges_df["target_type"] = edges_df["target"].map(node_type_dict).fillna(-1).astype(int)
+
+        # Loss/savings
+        n_anomalies = int(node_embeddings["is_anomaly"].sum())
+        n_normal = len(node_embeddings) - n_anomalies
+        suspicious_txn_value = float(edges_df[edges_df["is_suspicious"]]["base_amt"].sum())
+
+        DEMO_CONFIG = {
+            "avg_loss_per_undetected_aml": 0.15,
+            "investigation_cost_per_alert": 500,
+            "false_positive_cost": 200,
+            "regulatory_fine_multiplier": 3.0,
+            "recovery_rate_detected": 0.70,
+        }
+
+        if "is_sar" in node_embeddings.columns:
+            tp = int(((node_embeddings["is_sar"] == 1) & (node_embeddings["is_anomaly"])).sum())
+            fp = int(((node_embeddings["is_sar"] == 0) & (node_embeddings["is_anomaly"])).sum())
+            fn = int(((node_embeddings["is_sar"] == 1) & (~node_embeddings["is_anomaly"])).sum())
+            tn = int(((node_embeddings["is_sar"] == 0) & (~node_embeddings["is_anomaly"])).sum())
+        else:
+            tp = int(n_anomalies * 0.10)
+            fp = n_anomalies - tp
+            fn = int(n_normal * 0.01)
+            tn = n_normal - fn
+
+        cfg = DEMO_CONFIG
+        avg_suspicious_txn = suspicious_txn_value / max(n_anomalies, 1)
+        potential_loss_detected = tp * avg_suspicious_txn * cfg["avg_loss_per_undetected_aml"]
+        recovered_amount = potential_loss_detected * cfg["recovery_rate_detected"]
+        normal_txn_value = float(edges_df[~edges_df["is_suspicious"]]["base_amt"].sum())
+        avg_normal_txn = normal_txn_value / max(n_normal, 1)
+        potential_loss_undetected = fn * avg_normal_txn * cfg["avg_loss_per_undetected_aml"]
+        regulatory_fine_risk = potential_loss_undetected * cfg["regulatory_fine_multiplier"]
+        investigation_cost = n_anomalies * cfg["investigation_cost_per_alert"]
+        false_positive_cost = fp * cfg["false_positive_cost"]
+        total_operational_cost = investigation_cost + false_positive_cost
+        net_savings = recovered_amount - total_operational_cost
+
+        precision = tp / max(tp + fp, 1)
+        recall = tp / max(tp + fn, 1)
+        f1 = 2 * (precision * recall) / max(precision + recall, 1e-9)
+
+    # ── Header badges ──
+    src_color = "red" if data_source == "saml-d" else "blue"
+    st.markdown(
+        f"**`{data_source.upper()}`** &nbsp; Run `{selected_run_id[:8]}…` &nbsp; | &nbsp; "
+        f"**{len(node_embeddings):,}** nodes &nbsp; **{len(edges_df):,}** txns &nbsp; **{n_anomalies:,}** anomalies &nbsp; "
+        f"Threshold: `{threshold_val:.6f}`"
+    )
+    st.divider()
+
+    # ── Colour constants ──
+    CLR = dict(blue="#3498db", green="#2ecc71", red="#e74c3c", purple="#9b59b6",
+               orange="#e67e22", yellow="#f1c40f")
+    RISK_COLORS = [CLR["green"], CLR["yellow"], CLR["orange"], CLR["red"]]
+    RISK_LABELS = ["Low", "Medium", "High", "Critical"]
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  Sub-tabs
+    # ══════════════════════════════════════════════════════════════════════
+    stab1, stab2, stab3, stab4, stab5 = st.tabs([
+        "Executive Summary", "Financial Impact", "Network Graph",
+        "Transaction Deep Dive", "Node Risk Profiles",
+    ])
+
+    # ── TAB 1: Executive Summary ──
+    with stab1:
+        # KPI row
+        kc1, kc2, kc3, kc4 = st.columns(4)
+        kc1.metric("Total Transactions", f"{len(edges_df):,}")
+        kc2.metric("Total Volume", f"${edges_df['base_amt'].sum():,.0f}")
+        kc3.metric("Anomalies Detected", f"{n_anomalies:,}")
+        kc4.metric("Detection Rate", f"{100 * node_embeddings['is_anomaly'].mean():.1f}%")
+
+        col1, col2 = st.columns(2)
+
+        # Risk distribution bar
+        risk_cat = pd.cut(node_embeddings["risk_score"], bins=[0, 0.25, 0.5, 0.75, 1.0],
+                          labels=RISK_LABELS, include_lowest=True)
+        risk_counts = risk_cat.value_counts().reindex(RISK_LABELS).fillna(0)
+        fig_risk_bar = go.Figure(go.Bar(
+            x=RISK_LABELS, y=risk_counts.values, marker_color=RISK_COLORS,
+            text=[f"{int(v):,}" for v in risk_counts.values], textposition="outside"))
+        fig_risk_bar.update_layout(title="Risk Distribution", yaxis_title="Nodes", margin=dict(t=40, b=30))
+        col1.plotly_chart(fig_risk_bar, use_container_width=True)
+
+        # Suspicious vs normal pie
+        susp_vol = float(edges_df[edges_df["is_suspicious"]]["base_amt"].sum())
+        norm_vol = float(edges_df[~edges_df["is_suspicious"]]["base_amt"].sum())
+        fig_pie = go.Figure(go.Pie(
+            labels=["Normal", "Suspicious"], values=[norm_vol, susp_vol],
+            marker_colors=[CLR["blue"], CLR["red"]], hole=0.45, textinfo="label+percent",
+            hovertemplate="%{label}<br>$%{value:,.0f}<extra></extra>"))
+        fig_pie.update_layout(title="Volume: Normal vs Suspicious", margin=dict(t=40, b=10))
+        col2.plotly_chart(fig_pie, use_container_width=True)
+
+        col3, col4 = st.columns(2)
+
+        # Top 10 risk nodes
+        top10 = node_money.nlargest(10, "risk_score")
+        fig_top10 = go.Figure(go.Bar(
+            y=[f"{r['id'][:10]}… ({r['risk_score']:.2f})" for _, r in top10.iterrows()],
+            x=top10["total_volume"], orientation="h",
+            marker_color=px.colors.sample_colorscale("Reds", top10["risk_score"].values),
+            hovertemplate="Node: %{y}<br>Volume: $%{x:,.0f}<extra></extra>"))
+        fig_top10.update_layout(title="Top 10 Risk Nodes by Volume", xaxis_title="Volume ($)",
+                                yaxis=dict(autorange="reversed"), margin=dict(t=40, b=30, l=160))
+        col3.plotly_chart(fig_top10, use_container_width=True)
+
+        # Anomaly score curve
+        sorted_scores = np.sort(anomaly_scores)
+        fig_curve = go.Figure()
+        fig_curve.add_trace(go.Scatter(
+            x=list(range(len(sorted_scores))), y=sorted_scores,
+            fill="tozeroy", fillcolor="rgba(52,152,219,0.2)",
+            line=dict(color=CLR["blue"], width=2),
+            hovertemplate="Node %{x}<br>Score: %{y:.6f}<extra></extra>"))
+        fig_curve.add_hline(y=threshold_val, line_dash="dash", line_color="red",
+                            annotation_text=f"Threshold {threshold_val:.6f}")
+        fig_curve.update_layout(title="Anomaly Score Curve", xaxis_title="Nodes (sorted)",
+                                yaxis_title="Score", margin=dict(t=40, b=30))
+        col4.plotly_chart(fig_curve, use_container_width=True)
+
+    # ── TAB 2: Financial Impact ──
+    with stab2:
+        kc1, kc2, kc3, kc4 = st.columns(4)
+        kc1.metric("Recovered", f"${recovered_amount:,.0f}")
+        kc2.metric("Operational Cost", f"${total_operational_cost:,.0f}")
+        kc3.metric("Net Savings", f"${net_savings:,.0f}")
+        kc4.metric("Regulatory Risk", f"${regulatory_fine_risk:,.0f}")
+
+        col1, col2 = st.columns([5, 7])
+
+        # Confusion matrix
+        cm = np.array([[tn, fp], [fn, tp]])
+        fig_cm = px.imshow(cm, text_auto=True,
+                           x=["Predicted Normal", "Predicted Anomaly"],
+                           y=["Actual Normal", "Actual AML"],
+                           color_continuous_scale="RdYlGn_r", labels=dict(color="Count"))
+        fig_cm.update_layout(title="Detection Matrix", margin=dict(t=40, b=30))
+        col1.plotly_chart(fig_cm, use_container_width=True)
+
+        # Waterfall
+        fig_wf = go.Figure(go.Waterfall(
+            x=["Suspicious<br>Value", "Loss<br>Avoided", "Recovered",
+               "Investigation<br>Cost", "FP Cost", "Net Savings"],
+            y=[suspicious_txn_value, -potential_loss_detected, recovered_amount,
+               -investigation_cost, -false_positive_cost, net_savings],
+            measure=["absolute", "relative", "relative", "relative", "relative", "total"],
+            connector_line_color="rgba(200,200,200,0.3)",
+            increasing_marker_color=CLR["green"], decreasing_marker_color=CLR["red"],
+            totals_marker_color=CLR["purple"],
+            texttemplate="$%{y:,.0f}", textposition="outside"))
+        fig_wf.update_layout(title="Loss vs Savings Waterfall", yaxis_title="Amount ($)",
+                             margin=dict(t=40, b=30))
+        col2.plotly_chart(fig_wf, use_container_width=True)
+
+        # Gauges
+        fig_gauges = make_subplots(rows=1, cols=3, specs=[[{"type": "indicator"}] * 3],
+                                   subplot_titles=["Precision", "Recall", "F1 Score"])
+        for i, (name, val, color) in enumerate([
+            ("Precision", precision, CLR["blue"]),
+            ("Recall", recall, CLR["green"]),
+            ("F1", f1, CLR["purple"])
+        ], 1):
+            fig_gauges.add_trace(go.Indicator(
+                mode="gauge+number", value=val * 100, number_suffix="%",
+                gauge=dict(axis=dict(range=[0, 100]), bar_color=color,
+                           steps=[dict(range=[0, 50], color="rgba(255,0,0,0.15)"),
+                                  dict(range=[50, 80], color="rgba(255,255,0,0.10)"),
+                                  dict(range=[80, 100], color="rgba(0,255,0,0.10)")])), row=1, col=i)
+        fig_gauges.update_layout(height=280, margin=dict(t=40, b=10))
+        st.plotly_chart(fig_gauges, use_container_width=True)
+
+    # ── TAB 3: Network Graph ──
+    with stab3:
+        import networkx as nx
+
+        filter_mode = st.selectbox("Filter", ["All Nodes", "Suspicious Only", "High-Risk Neighborhood"],
+                                   key="idash_net_filter")
+        filter_map = {"All Nodes": "all", "Suspicious Only": "suspicious",
+                      "High-Risk Neighborhood": "high_risk"}
+        fmode = filter_map[filter_mode]
+        max_nodes = 300
+
+        edges_sorted = edges_df.sort_values(["edge_risk", "base_amt"], ascending=[False, False])
+        if fmode == "suspicious":
+            edges_subset = edges_sorted[edges_sorted["is_suspicious"]].head(max_nodes * 3)
+        elif fmode == "high_risk":
+            hr_nodes = set(node_embeddings[node_embeddings["risk_score"] > 0.75]["id"])
+            edges_subset = edges_sorted[
+                edges_sorted["source"].isin(hr_nodes) | edges_sorted["target"].isin(hr_nodes)
+            ].head(max_nodes * 3)
+        else:
+            edges_subset = edges_sorted.head(max_nodes * 3)
+
+        sel_nodes = set(edges_subset["source"].tolist() + edges_subset["target"].tolist())
+        if len(sel_nodes) > max_nodes:
+            top_n = node_embeddings[node_embeddings["id"].isin(sel_nodes)].nlargest(max_nodes, "risk_score")["id"]
+            sel_nodes = set(top_n)
+            edges_subset = edges_subset[
+                edges_subset["source"].isin(sel_nodes) & edges_subset["target"].isin(sel_nodes)]
+
+        G = nx.DiGraph()
+        for _, r in edges_subset.iterrows():
+            G.add_edge(r["source"], r["target"], amount=r["base_amt"], risk=r["edge_risk"])
+
+        if G.number_of_nodes() == 0:
+            st.info("No nodes match the selected filter.")
+        else:
+            pos = nx.spring_layout(G, k=3 / np.sqrt(G.number_of_nodes()), iterations=50, seed=42)
+            edge_x, edge_y = [], []
+            for u, v in G.edges():
+                x0, y0 = pos[u]; x1, y1 = pos[v]
+                edge_x += [x0, x1, None]; edge_y += [y0, y1, None]
+
+            vol_dict = node_money.set_index("id")["total_volume"].to_dict()
+            txn_dict = node_money.set_index("id")["total_transactions"].to_dict()
+            node_x = [pos[n][0] for n in G.nodes()]
+            node_y = [pos[n][1] for n in G.nodes()]
+            n_risk = [node_risk_dict.get(n, 0) for n in G.nodes()]
+            n_vol = [vol_dict.get(n, 0) for n in G.nodes()]
+            vol_mx = max(n_vol) if n_vol else 1
+            n_sizes = [6 + 20 * (v / vol_mx) for v in n_vol]
+            hover = [
+                f"ID: {n[:16]}<br>Risk: {node_risk_dict.get(n,0):.4f}<br>"
+                f"Volume: ${vol_dict.get(n,0):,.0f}<br>Txns: {int(txn_dict.get(n,0)):,}"
+                for n in G.nodes()]
+
+            fig_net = go.Figure(data=[
+                go.Scatter(x=edge_x, y=edge_y, mode="lines",
+                           line=dict(width=0.5, color="rgba(150,150,150,0.3)"), hoverinfo="none"),
+                go.Scatter(x=node_x, y=node_y, mode="markers",
+                           marker=dict(size=n_sizes, color=n_risk, colorscale="RdYlGn_r",
+                                       cmin=0, cmax=1, colorbar=dict(title="Risk"),
+                                       line=dict(width=0.5, color="white")),
+                           text=hover, hoverinfo="text"),
+            ])
+            fig_net.update_layout(
+                title=f"Transaction Network ({G.number_of_nodes()} nodes, {G.number_of_edges()} edges)",
+                showlegend=False, hovermode="closest", height=650,
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                margin=dict(t=40, b=10, l=10, r=10))
+            st.plotly_chart(fig_net, use_container_width=True)
+
+    # ── TAB 4: Transaction Deep Dive ──
+    with stab4:
+        amt_range = st.slider("Amount Range ($)", min_value=0.0,
+                              max_value=float(edges_df["base_amt"].quantile(0.99)),
+                              value=(0.0, float(edges_df["base_amt"].quantile(0.99))),
+                              step=100.0, key="idash_amt_slider")
+        filtered = edges_df[(edges_df["base_amt"] >= amt_range[0]) & (edges_df["base_amt"] <= amt_range[1])]
+
+        col1, col2 = st.columns(2)
+
+        # Amount histogram
+        fig_hist = px.histogram(filtered, x="base_amt", nbins=80,
+                                color_discrete_sequence=[CLR["blue"]],
+                                labels={"base_amt": "Amount ($)"})
+        fig_hist.update_layout(title=f"Amount Distribution ({len(filtered):,} txns)",
+                               yaxis_type="log", yaxis_title="Count (log)", margin=dict(t=40, b=30))
+        col1.plotly_chart(fig_hist, use_container_width=True)
+
+        # Amount vs risk scatter
+        samp = filtered.sample(min(5000, len(filtered)), random_state=42) if len(filtered) > 0 else filtered
+        fig_scatter = px.scatter(samp, x="base_amt", y="edge_risk",
+                                 color="edge_risk", color_continuous_scale="RdYlGn_r",
+                                 hover_data=["source", "target", "base_amt", "edge_risk"],
+                                 labels={"base_amt": "Amount ($)", "edge_risk": "Risk"})
+        fig_scatter.update_layout(title="Amount vs Risk", margin=dict(t=40, b=30))
+        col2.plotly_chart(fig_scatter, use_container_width=True)
+
+        col3, col4 = st.columns(2)
+
+        # Volume by tx_type
+        type_vol = edges_df.groupby("tx_type")["base_amt"].sum().sort_values(ascending=True).reset_index()
+        type_vol["tx_type"] = type_vol["tx_type"].astype(str)
+        fig_type = px.bar(type_vol, y="tx_type", x="base_amt", orientation="h",
+                          color="base_amt", color_continuous_scale="Blues",
+                          labels={"base_amt": "Volume ($)", "tx_type": "Tx Type"})
+        fig_type.update_layout(title="Volume by Transaction Type", margin=dict(t=40, b=30))
+        col3.plotly_chart(fig_type, use_container_width=True)
+
+        # Risk heatmap
+        if nodes_df is not None and "source_type" in edges_df.columns:
+            hm = edges_df.pivot_table(values="edge_risk", index="source_type",
+                                      columns="target_type", aggfunc="mean").fillna(0)
+            fig_hm = px.imshow(hm, color_continuous_scale="RdYlGn_r",
+                               labels=dict(x="Target Type", y="Source Type", color="Avg Risk"),
+                               x=[f"Type {c}" for c in hm.columns],
+                               y=[f"Type {i}" for i in hm.index], text_auto=".3f")
+            fig_hm.update_layout(title="Avg Risk by Node-Type Pair", margin=dict(t=40, b=30))
+            col4.plotly_chart(fig_hm, use_container_width=True)
+
+    # ── TAB 5: Node Risk Profiles ──
+    with stab5:
+        col1, col2 = st.columns(2)
+
+        # Risk histogram with percentiles
+        fig_rh = go.Figure()
+        fig_rh.add_trace(go.Histogram(x=node_money["risk_score"], nbinsx=60,
+                                      marker_color=CLR["blue"], opacity=0.75))
+        for p, clr in [(50, "green"), (75, "yellow"), (90, "orange"), (95, "red"), (99, "darkred")]:
+            val = float(np.percentile(node_money["risk_score"], p))
+            fig_rh.add_vline(x=val, line_dash="dash", line_color=clr,
+                             annotation_text=f"P{p}: {val:.3f}")
+        fig_rh.update_layout(title="Risk Score Distribution", xaxis_title="Risk Score",
+                             yaxis_title="Nodes", margin=dict(t=40, b=30))
+        col1.plotly_chart(fig_rh, use_container_width=True)
+
+        # Volume vs risk scatter
+        fig_vr = px.scatter(node_money, x="total_volume", y="risk_score",
+                            color="is_anomaly", color_discrete_map={True: CLR["red"], False: CLR["blue"]},
+                            hover_data=["id", "total_volume", "total_transactions", "risk_score"],
+                            labels={"total_volume": "Volume ($)", "risk_score": "Risk Score", "is_anomaly": "Anomaly"})
+        fig_vr.update_layout(title="Volume vs Risk", margin=dict(t=40, b=30))
+        col2.plotly_chart(fig_vr, use_container_width=True)
+
+        # Top 20 table
+        st.subheader("Top 20 Highest Risk Nodes")
+        top20 = node_money.nlargest(20, "risk_score")[
+            ["id", "risk_score", "total_volume", "total_transactions", "is_anomaly", "net_flow"]].copy()
+        top20["risk_score"] = top20["risk_score"].round(4)
+        top20["total_volume"] = top20["total_volume"].apply(lambda x: f"${x:,.0f}")
+        top20["net_flow"] = top20["net_flow"].apply(lambda x: f"${x:,.0f}")
+        top20["total_transactions"] = top20["total_transactions"].astype(int)
+        st.dataframe(top20, use_container_width=True, hide_index=True)
+
+        col3, col4, col5 = st.columns(3)
+
+        # Box plot by node type
+        if "type" in node_money.columns:
+            fig_box = px.box(node_money, x="type", y="risk_score",
+                             color="type", color_discrete_sequence=px.colors.qualitative.Set2,
+                             labels={"type": "Node Type", "risk_score": "Risk Score"})
+            fig_box.update_layout(title="Risk by Node Type", showlegend=False, margin=dict(t=40, b=30))
+            col3.plotly_chart(fig_box, use_container_width=True)
+
+        # Radar chart
+        high_risk = node_money[node_money["risk_score"] > 0.75]
+        low_risk = node_money[node_money["risk_score"] <= 0.25]
+        radar_cats = ["Avg Volume", "Avg Txns", "Out Flow", "In Flow", "Net Flow Var"]
+
+        def _snorm(s, d):
+            return float(s.mean() / d) if d > 0 and len(s) > 0 else 0
+
+        vm = node_money["total_volume"].max() or 1
+        tm = node_money["total_transactions"].max() or 1
+        om = node_money["outgoing_amt"].max() or 1
+        im_ = node_money["incoming_amt"].max() or 1
+        ns = node_money["net_flow"].std() or 1
+
+        hv = [_snorm(high_risk["total_volume"], vm), _snorm(high_risk["total_transactions"], tm),
+              _snorm(high_risk["outgoing_amt"], om), _snorm(high_risk["incoming_amt"], im_),
+              float(high_risk["net_flow"].std() / ns) if len(high_risk) > 1 else 0]
+        lv = [_snorm(low_risk["total_volume"], vm), _snorm(low_risk["total_transactions"], tm),
+              _snorm(low_risk["outgoing_amt"], om), _snorm(low_risk["incoming_amt"], im_),
+              float(low_risk["net_flow"].std() / ns) if len(low_risk) > 1 else 0]
+
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(
+            r=hv + [hv[0]], theta=radar_cats + [radar_cats[0]],
+            fill="toself", name="High Risk", line_color=CLR["red"], fillcolor="rgba(231,76,60,0.2)"))
+        fig_radar.add_trace(go.Scatterpolar(
+            r=lv + [lv[0]], theta=radar_cats + [radar_cats[0]],
+            fill="toself", name="Low Risk", line_color=CLR["green"], fillcolor="rgba(46,204,113,0.2)"))
+        fig_radar.update_layout(title="Risk Profile Comparison",
+                                polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+                                margin=dict(t=50, b=30))
+        col4.plotly_chart(fig_radar, use_container_width=True)
+
+        # Lorenz curve
+        sorted_by_risk = node_money.sort_values("risk_score")
+        cum_vol = sorted_by_risk["total_volume"].cumsum() / sorted_by_risk["total_volume"].sum()
+        x_lorenz = np.linspace(0, 1, len(cum_vol))
+        fig_lorenz = go.Figure()
+        fig_lorenz.add_trace(go.Scatter(x=x_lorenz, y=cum_vol.values, fill="tonexty",
+                                        name="Actual", line_color=CLR["blue"],
+                                        fillcolor="rgba(52,152,219,0.2)"))
+        fig_lorenz.add_trace(go.Scatter(x=[0, 1], y=[0, 1], line_dash="dash",
+                                        name="Equal", line_color="grey"))
+        fig_lorenz.update_layout(title="Risk Concentration (Lorenz)",
+                                 xaxis_title="Cumulative % Nodes", yaxis_title="Cumulative % Volume",
+                                 margin=dict(t=40, b=30))
+        col5.plotly_chart(fig_lorenz, use_container_width=True)
+
+
 # --- Sidebar ---
 
 def render_sidebar():
@@ -1956,7 +2458,9 @@ def main():
     render_sidebar()
 
     # Tab navigation
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚀 Run", "📊 Status", "📈 Dashboard", "🔬 Analytics", "📄 Report"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🚀 Run", "📊 Status", "📈 Dashboard", "🔬 Analytics", "📄 Report", "🎛 Interactive",
+    ])
 
     with tab1:
         render_run_tab()
@@ -1972,6 +2476,9 @@ def main():
 
     with tab5:
         render_report_tab()
+
+    with tab6:
+        render_interactive_dashboard_tab()
 
 
 if __name__ == "__main__":
