@@ -32,6 +32,39 @@ PROJECT_ROOT = get_repo_root()
 ARTIFACTS_ROOT = get_artifacts_root()
 
 
+def _resolve_artifact_dir(run: PipelineRun) -> Path:
+    """
+    Resolve the artifact directory for a run using the DB artifact_path.
+
+    For SAML-D runs, artifact_path is an absolute path like
+    /mnt/e/xx/saml-d/artifacts/runs/<run_id>.
+    For demo-data runs, it's a relative path like artifacts/runs/<run_id>.
+    Falls back to get_run_dir() if artifact_path is not set.
+    """
+    if run.artifact_path:
+        p = Path(run.artifact_path)
+        if p.is_absolute():
+            return p
+        return (PROJECT_ROOT / p).resolve()
+    return get_run_dir(run.id)
+
+
+def _safe_join(base_dir: Path, relative_path: str) -> Path:
+    """
+    Safely join a relative path to a base directory.
+    Prevents path traversal attacks.
+    """
+    clean_path = relative_path.lstrip("/\\")
+    full_path = (base_dir / clean_path).resolve()
+    try:
+        full_path.relative_to(base_dir.resolve())
+    except ValueError:
+        raise ValueError(
+            f"Path traversal detected: '{relative_path}' escapes artifact directory"
+        )
+    return full_path
+
+
 class ArtifactInfo(BaseModel):
     """Information about an artifact file"""
     name: str
@@ -89,10 +122,7 @@ async def list_artifacts(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        artifact_dir = get_run_dir(run_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    artifact_dir = _resolve_artifact_dir(run)
 
     if not artifact_dir.exists():
         return ArtifactListResponse(run_id=run_id, artifacts=[], total_count=0)
@@ -146,9 +176,10 @@ async def get_artifact_file(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    # Use safe_join_run for path traversal protection
+    # Use _safe_join for path traversal protection with correct artifact dir
     try:
-        full_path = safe_join_run(run_id, file_path)
+        artifact_dir = _resolve_artifact_dir(run)
+        full_path = _safe_join(artifact_dir, file_path)
     except ValueError as e:
         raise HTTPException(status_code=403, detail=f"Access denied: {e}")
 
@@ -176,10 +207,7 @@ async def get_report(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        artifact_dir = get_run_dir(run_id) / "report"
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    artifact_dir = _resolve_artifact_dir(run) / "report"
 
     if format == "json":
         report_meta = artifact_dir / "report_meta.json"
@@ -215,10 +243,7 @@ async def list_plots(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        artifact_dir = get_run_dir(run_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    artifact_dir = _resolve_artifact_dir(run)
 
     plots = []
 
@@ -260,10 +285,7 @@ async def list_tables(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        artifact_dir = get_run_dir(run_id) / "data"
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    artifact_dir = _resolve_artifact_dir(run) / "data"
     tables = []
 
     if artifact_dir.exists():
@@ -300,10 +322,7 @@ async def get_table_data(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        data_dir = get_run_dir(run_id) / "data"
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    data_dir = _resolve_artifact_dir(run) / "data"
 
     # Find the table file
     table_path = None
@@ -375,10 +394,7 @@ async def get_anomalies_data(
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        data_dir = get_run_dir(run_id) / "data"
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    data_dir = _resolve_artifact_dir(run) / "data"
 
     # Look for embeddings file with anomaly scores
     anomaly_file = None
@@ -455,10 +471,7 @@ async def get_run_bundle(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        artifacts_dir = get_run_dir(run_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    artifacts_dir = _resolve_artifact_dir(run)
 
     bundle_path = artifacts_dir / "report" / "run_bundle.zip"
 
@@ -503,10 +516,7 @@ async def get_run_summary(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    try:
-        artifact_dir = get_run_dir(run_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid run_id: {e}")
+    artifact_dir = _resolve_artifact_dir(run)
 
     # Count artifacts by type
     artifact_counts = {"image": 0, "data": 0, "model": 0, "report": 0, "config": 0, "notebook": 0, "log": 0, "other": 0}

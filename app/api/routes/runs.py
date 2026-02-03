@@ -27,6 +27,22 @@ PROJECT_ROOT = get_repo_root()
 ARTIFACTS_ROOT = get_artifacts_root()
 
 
+def _resolve_artifact_dir(run: PipelineRun) -> Path:
+    """
+    Resolve the artifact directory for a run using the DB artifact_path.
+
+    For SAML-D runs, artifact_path is an absolute path.
+    For demo-data runs, it's a relative path resolved against PROJECT_ROOT.
+    Falls back to get_run_dir() if artifact_path is not set.
+    """
+    if run.artifact_path:
+        p = Path(run.artifact_path)
+        if p.is_absolute():
+            return p
+        return (PROJECT_ROOT / p).resolve()
+    return get_run_dir(run.id)
+
+
 # Request/Response Models
 class RunParams(BaseModel):
     """Parameters for starting a pipeline run"""
@@ -118,13 +134,19 @@ async def create_run(
     # Generate unique run ID
     run_id = str(uuid.uuid4())
 
+    # Resolve artifact path based on data source
+    if params.data_source == "saml-d":
+        artifact_path = f"/mnt/e/xx/saml-d/artifacts/runs/{run_id}"
+    else:
+        artifact_path = f"artifacts/runs/{run_id}"
+
     # Create run record
     run = PipelineRun(
         id=run_id,
         status=RunStatus.PENDING,
         params=params.model_dump(),
         created_at=datetime.utcnow(),
-        artifact_path=f"artifacts/runs/{run_id}",
+        artifact_path=artifact_path,
     )
 
     db.add(run)
@@ -213,7 +235,8 @@ async def get_run_metrics(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    metrics_file = ARTIFACTS_ROOT / run_id / "metrics" / "metrics.json"
+    artifacts_dir = _resolve_artifact_dir(run)
+    metrics_file = artifacts_dir / "metrics" / "metrics.json"
 
     if metrics_file.exists():
         import json
@@ -238,7 +261,8 @@ async def get_artifact_index(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    index_file = ARTIFACTS_ROOT / run_id / "artifact_index.json"
+    artifacts_dir = _resolve_artifact_dir(run)
+    index_file = artifacts_dir / "artifact_index.json"
 
     if index_file.exists():
         import json
@@ -248,7 +272,6 @@ async def get_artifact_index(run_id: str, db: Session = Depends(get_db)):
         # Try to build index on the fly
         try:
             from ...pipeline_runner.artifacts_index import ArtifactIndexer
-            artifacts_dir = ARTIFACTS_ROOT / run_id
             if artifacts_dir.exists():
                 indexer = ArtifactIndexer(artifacts_dir)
                 return indexer.build_index()
@@ -280,8 +303,8 @@ async def get_run_paths(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
 
-    metrics_file = ARTIFACTS_ROOT / run_id / "metrics" / "metrics.json"
-    artifacts_dir = ARTIFACTS_ROOT / run_id
+    artifacts_dir = _resolve_artifact_dir(run)
+    metrics_file = artifacts_dir / "metrics" / "metrics.json"
 
     paths = {
         "run_id": run_id,

@@ -320,14 +320,21 @@ class PipelineOrchestrator:
         self.progress_callback = progress_callback
         self.step_callback = step_callback
 
-        # Setup paths using path utilities (robust absolute paths for Celery compatibility)
+        # Extract run parameters first (needed to resolve artifact paths)
         self.project_root = get_repo_root()
-        self.artifacts_dir = get_run_dir(run_id)
-        self.data_dir = get_data_dir(run_id)
-        self.models_dir = get_models_dir(run_id)
-        self.plots_dir = get_plots_dir(run_id)
-        self.report_dir = get_report_dir(run_id)
-        self.logs_dir = get_logs_dir(run_id)
+        self._extract_params()
+
+        # Setup paths — use custom artifacts root for SAML-D data source
+        if self.data_source == "saml-d":
+            self.artifacts_dir = Path("/mnt/e/xx/saml-d/artifacts/runs") / run_id
+        else:
+            self.artifacts_dir = get_run_dir(run_id)
+
+        self.data_dir = self.artifacts_dir / "data"
+        self.models_dir = self.artifacts_dir / "models"
+        self.plots_dir = self.artifacts_dir / "plots"
+        self.report_dir = self.artifacts_dir / "report"
+        self.logs_dir = self.artifacts_dir / "logs"
         self.notebooks_dir = self.artifacts_dir / "notebooks_executed"
         self.metrics_dir = self.artifacts_dir / "metrics"
 
@@ -344,9 +351,6 @@ class PipelineOrchestrator:
             self.notebooks_dir,
             self.logs_dir,
         )
-
-        # Extract run parameters
-        self._extract_params()
 
         # Results accumulator
         self.results = {
