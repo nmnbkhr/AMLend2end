@@ -108,7 +108,7 @@ def get_artifact_type(filename: str) -> str:
 
 
 @router.get("/{run_id}", response_model=ArtifactListResponse)
-async def list_artifacts(
+def list_artifacts(
     run_id: str,
     type_filter: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -161,7 +161,7 @@ async def list_artifacts(
 
 
 @router.get("/{run_id}/file/{file_path:path}")
-async def get_artifact_file(
+def get_artifact_file(
     run_id: str,
     file_path: str,
     db: Session = Depends(get_db),
@@ -193,7 +193,7 @@ async def get_artifact_file(
 
 
 @router.get("/{run_id}/report")
-async def get_report(
+def get_report(
     run_id: str,
     format: str = "html",
     db: Session = Depends(get_db),
@@ -233,7 +233,7 @@ async def get_report(
 
 
 @router.get("/{run_id}/plots")
-async def list_plots(run_id: str, db: Session = Depends(get_db)):
+def list_plots(run_id: str, db: Session = Depends(get_db)):
     """
     List all plot/visualization files for a run.
 
@@ -275,7 +275,7 @@ async def list_plots(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{run_id}/tables")
-async def list_tables(run_id: str, db: Session = Depends(get_db)):
+def list_tables(run_id: str, db: Session = Depends(get_db)):
     """
     List all data table files for a run.
 
@@ -303,7 +303,7 @@ async def list_tables(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{run_id}/table/{table_name}")
-async def get_table_data(
+def get_table_data(
     run_id: str,
     table_name: str,
     limit: int = Query(default=100, le=1000),
@@ -379,7 +379,7 @@ async def get_table_data(
 
 
 @router.get("/{run_id}/anomalies")
-async def get_anomalies_data(
+def get_anomalies_data(
     run_id: str,
     limit: int = Query(default=50, le=500),
     min_score: Optional[float] = None,
@@ -461,7 +461,7 @@ async def get_anomalies_data(
 
 
 @router.get("/{run_id}/bundle")
-async def get_run_bundle(run_id: str, db: Session = Depends(get_db)):
+def get_run_bundle(run_id: str, db: Session = Depends(get_db)):
     """
     Download the run bundle zip file.
 
@@ -506,7 +506,7 @@ async def get_run_bundle(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{run_id}/summary")
-async def get_run_summary(run_id: str, db: Session = Depends(get_db)):
+def get_run_summary(run_id: str, db: Session = Depends(get_db)):
     """
     Get a summary of run results and artifacts.
 
@@ -518,20 +518,27 @@ async def get_run_summary(run_id: str, db: Session = Depends(get_db)):
 
     artifact_dir = _resolve_artifact_dir(run)
 
-    # Count artifacts by type
+    # Count artifacts by type (with cap to avoid slow walks on network drives)
     artifact_counts = {"image": 0, "data": 0, "model": 0, "report": 0, "config": 0, "notebook": 0, "log": 0, "other": 0}
     total_size = 0
+    MAX_FILES_WALK = 500  # Cap to avoid slow os.walk on /mnt/ drives
 
     if artifact_dir.exists():
+        file_count = 0
+        capped = False
         for root, dirs, files in os.walk(artifact_dir):
             for filename in files:
-                filepath = Path(root) / filename
                 artifact_type = get_artifact_type(filename)
                 if artifact_type in artifact_counts:
                     artifact_counts[artifact_type] += 1
                 else:
                     artifact_counts["other"] += 1
-                total_size += filepath.stat().st_size
+                file_count += 1
+                if file_count >= MAX_FILES_WALK:
+                    capped = True
+                    break
+            if capped:
+                break
 
     # Check for metrics
     metrics = None
@@ -551,7 +558,7 @@ async def get_run_summary(run_id: str, db: Session = Depends(get_db)):
         "artifacts": {
             "counts": artifact_counts,
             "total_files": sum(artifact_counts.values()),
-            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "total_size_mb": None,  # Skipped for performance
         },
         "has_report": (artifact_dir / "report" / "report.html").exists() if artifact_dir.exists() else False,
         "has_metrics": metrics is not None,

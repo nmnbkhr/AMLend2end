@@ -26,25 +26,52 @@ setup(
         "numpy>=1.24.0",
         "pandas>=2.0.0",
         "scikit-learn>=1.3.0",
+        "scipy>=1.10.0",
 
         # Graph processing
         "networkx>=3.0",
         "node2vec>=0.4.6",
+        "stellargraph==1.2.1",
 
         # Visualization
         "matplotlib>=3.7.0",
         "seaborn>=0.13.0",
+        "plotly>=5.10.0",
 
-        # Data storage
+        # Data storage / serialization
         "pyarrow>=14.0.0",
+        "pyyaml>=6.0",
+
+        # Web API
+        "fastapi>=0.95.0",
+        "uvicorn>=0.21.0",
+        "pydantic>=2.0.0",
+
+        # Background task queue
+        "celery>=5.2.0",
+        "redis>=4.5.0",
+
+        # Web UI
+        "streamlit>=1.20.0",
+
+        # Database
+        "sqlalchemy>=2.0.0",
+
+        # HTTP
+        "requests>=2.28.0",
+
+        # Templating & reports
+        "jinja2>=3.1.0",
+        "Pillow>=9.0.0",
 
         # Jupyter support
         "ipywidgets>=8.0.0",
         "jupyterlab>=4.0.0",
 
         # Utilities
-        "scipy>=1.10.0",
         "tqdm>=4.65.0",
+        "absl-py>=1.4.0",
+        "six>=1.16.0",
     ],
     extras_require={
         "gpu": [

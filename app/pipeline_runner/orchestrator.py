@@ -343,6 +343,7 @@ class PipelineOrchestrator:
         self.logs_dir = self.artifacts_dir / "logs"
         self.notebooks_dir = self.artifacts_dir / "notebooks_executed"
         self.metrics_dir = self.artifacts_dir / "metrics"
+        self.queues_dir = self.artifacts_dir / "queues"
 
         # Create artifact directories
         self._setup_artifact_dirs()
@@ -421,6 +422,7 @@ class PipelineOrchestrator:
             self.logs_dir,
             self.notebooks_dir,
             self.metrics_dir,
+            self.queues_dir,
         ]
         for dir_path in dirs:
             dir_path.mkdir(parents=True, exist_ok=True)
@@ -677,7 +679,7 @@ class PipelineOrchestrator:
                 # Skip HP tuning steps if configured
                 if is_optional and self.skip_hp_tuning and ("maggy" in notebook.lower() or "hp" in step_name.lower()):
                     logger.info(f"Skipping optional step {step_num}: {step_name}")
-                    self._update_progress(step_num, f"{step_name} (skipped)", (step_num / self.total_steps) * 100)
+                    self._update_progress(step_num, f"{step_name} (skipped)", (step_num / self.total_steps) * 90)
                     self._update_step_status(step_num, step_name, "skipped")
                     self.results["step_results"][step_num] = {"status": "skipped", "reason": "optional_disabled"}
                     completed_steps += 1
@@ -686,14 +688,14 @@ class PipelineOrchestrator:
                 # Skip visualization steps if not requested
                 if step_num >= 10 and not self.generate_viz:
                     logger.info(f"Skipping visualization step {step_num}: {step_name}")
-                    self._update_progress(step_num, f"{step_name} (skipped)", (step_num / self.total_steps) * 100)
+                    self._update_progress(step_num, f"{step_name} (skipped)", (step_num / self.total_steps) * 90)
                     self._update_step_status(step_num, step_name, "skipped")
                     self.results["step_results"][step_num] = {"status": "skipped", "reason": "visualization_disabled"}
                     completed_steps += 1
                     continue
 
                 # Update progress to "running"
-                self._update_progress(step_num, f"Running: {step_name}", ((step_num - 0.5) / self.total_steps) * 100)
+                self._update_progress(step_num, f"Running: {step_name}", ((step_num - 0.5) / self.total_steps) * 90)
                 self._update_step_status(step_num, step_name, "running")
 
                 # Execute the step
@@ -715,11 +717,16 @@ class PipelineOrchestrator:
                     completed_steps += 1
                     self._update_step_status(step_num, step_name, "completed")
 
-                # Update progress to "completed"
-                progress_pct = (step_num / self.total_steps) * 100
+                # Update progress to "completed" – cap at 90% so the
+                # remaining 10% is reserved for post-processing; tasks.py
+                # sets 100% atomically together with status=COMPLETED.
+                progress_pct = (step_num / self.total_steps) * 90
                 self._update_progress(step_num, step_name, progress_pct)
 
                 logger.info(f"Completed step {step_num}/{self.total_steps}: {step_name}")
+
+            # -- Post-processing phase (90 → 99%) --
+            self._update_progress(self.total_steps, "Finalizing: collecting outputs", 91)
 
             # Collect outputs from the pipeline
             self._collect_outputs()
@@ -732,11 +739,15 @@ class PipelineOrchestrator:
                 logger.warning(f"Failed to style plots: {e}")
                 self.results["styled_plots_count"] = 0
 
+            self._update_progress(self.total_steps, "Finalizing: parsing results", 93)
+
             # Parse results
             parsed_results = self._parse_results()
             self.results.update(parsed_results)
             self.results["steps_completed"] = completed_steps
             self.results["steps_failed"] = failed_steps
+
+            self._update_progress(self.total_steps, "Finalizing: building metrics", 95)
 
             # Build metrics for dashboard
             try:
@@ -749,6 +760,38 @@ class PipelineOrchestrator:
                 self._build_artifact_index()
             except Exception as e:
                 logger.warning(f"Failed to build artifact index: {e}")
+
+            self._update_progress(self.total_steps, "Finalizing: building risk queue", 97)
+
+            # Build risk queue
+            try:
+                from .risk_ranking import build_risk_queue
+                queue_summary = build_risk_queue(self.artifacts_dir)
+                self.results["risk_queue"] = queue_summary
+                logger.info(f"Risk queue built: {queue_summary.get('total_entities', 0)} entities")
+                # Rebuild artifact index so it picks up new queues/ files
+                try:
+                    self._build_artifact_index()
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.warning(f"Failed to build risk queue: {e}")
+
+            # Build investigation cases (Phase B)
+            try:
+                from .case_builder import build_cases
+                case_summary = build_cases(self.artifacts_dir)
+                self.results["cases"] = case_summary
+                logger.info(f"Cases built: {case_summary.get('total_cases', 0)} cases")
+                # Rebuild artifact index so it picks up cases/ files
+                try:
+                    self._build_artifact_index()
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.warning(f"Failed to build cases: {e}")
+
+            self._update_progress(self.total_steps, "Finalizing: generating report", 99)
 
             # Generate report if requested
             if self.generate_report:

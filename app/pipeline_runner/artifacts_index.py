@@ -68,6 +68,16 @@ FILE_CATEGORIES = {
         "extensions": [".json", ".yaml", ".yml", ".toml"],
         "description": "Configuration files",
     },
+    "queues": {
+        "extensions": [".parquet", ".csv", ".json"],
+        "description": "Risk queue files",
+        "subdirectory": "queues",
+    },
+    "cases": {
+        "extensions": [".parquet", ".json"],
+        "description": "Investigation case files",
+        "subdirectory": "cases",
+    },
 }
 
 
@@ -85,6 +95,14 @@ def get_file_category(filename: str, relative_path: str = "") -> str:
     # Check if this is a styled plot (in plots/styled/ directory)
     if relative_path and "plots/styled" in str(relative_path):
         return "styled_plots"
+
+    # Check if this is a queue file (in queues/ directory)
+    if relative_path and "queues" in str(relative_path):
+        return "queues"
+
+    # Check if this is a case file (in cases/ directory)
+    if relative_path and "cases" in str(relative_path):
+        return "cases"
 
     ext = Path(filename).suffix.lower()
     for category, info in FILE_CATEGORIES.items():

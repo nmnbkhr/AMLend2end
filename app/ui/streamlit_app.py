@@ -8,6 +8,8 @@ A single-page application with tabs for:
 - Analytics: Interactive Plotly charts from run data
 - Report: Access and download generated reports
 - Interactive: Full interactive dashboard with 5 analysis sub-tabs
+- Tier Queue: Risk-ranked entity queue with filtering and export
+- Cases: Investigation-ready AML cases with typology detection and network graphs
 
 Run with: streamlit run app/ui/streamlit_app.py
 """
@@ -585,11 +587,11 @@ def kpi_card(title: str, value: str, sub: str = ""):
     )
 
 
-def api_request(method: str, endpoint: str, **kwargs) -> dict:
+def api_request(method: str, endpoint: str, timeout: int = 30, **kwargs) -> dict:
     """Make an API request and handle errors."""
     url = f"{API_BASE_URL}{endpoint}"
     try:
-        response = requests.request(method, url, timeout=30, **kwargs)
+        response = requests.request(method, url, timeout=timeout, **kwargs)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.ConnectionError:
@@ -741,7 +743,7 @@ def render_run_tab():
     # Start button
     st.divider()
 
-    if st.button("🚀 Start Pipeline Run", type="primary", use_container_width=True):
+    if st.button("🚀 Start Pipeline Run", type="primary", width="stretch"):
         with st.spinner("Starting pipeline run..."):
             params = {
                 "profile": selected_profile,
@@ -874,7 +876,7 @@ def render_status_tab():
 
         st.dataframe(
             steps_df[["Step", "Name", "Status"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -1189,7 +1191,7 @@ def render_dashboard_tab():
                         try:
                             response = requests.get(img_url, timeout=10)
                             if response.status_code == 200:
-                                st.image(response.content, use_container_width=True)
+                                st.image(response.content, width="stretch")
                         except:
                             st.warning(f"Could not load: {plot['name']}")
     else:
@@ -1258,7 +1260,7 @@ def render_dashboard_tab():
 
         # Display table
         if show_cols and len(df) > 0:
-            st.dataframe(df[show_cols], use_container_width=True, hide_index=True)
+            st.dataframe(df[show_cols], width="stretch", hide_index=True)
 
             # Download buttons
             btn_col1, btn_col2 = st.columns(2)
@@ -1302,7 +1304,7 @@ def render_dashboard_tab():
 
             # Display table
             if show_cols:
-                st.dataframe(df[show_cols], use_container_width=True, hide_index=True)
+                st.dataframe(df[show_cols], width="stretch", hide_index=True)
 
                 # Download button
                 csv = df[show_cols].to_csv(index=False)
@@ -1365,7 +1367,7 @@ def render_report_tab():
 
         btn_col1, btn_col2, btn_col3 = st.columns(3)
         with btn_col1:
-            st.link_button("🔗 Open in Browser", report_url, use_container_width=True)
+            st.link_button("🔗 Open in Browser", report_url, width="stretch")
         with btn_col2:
             try:
                 response = requests.get(report_url, timeout=15)
@@ -1375,7 +1377,7 @@ def render_report_tab():
                         data=response.content,
                         file_name=f"aml_report_{selected_run_id[:8]}.html",
                         mime="text/html",
-                        use_container_width=True,
+                        width="stretch",
                     )
             except:
                 st.warning("Could not fetch report")
@@ -1388,14 +1390,14 @@ def render_report_tab():
                         data=bundle_response.content,
                         file_name=f"aml_run_{selected_run_id[:8]}_bundle.zip",
                         mime="application/zip",
-                        use_container_width=True,
+                        width="stretch",
                         help="ZIP containing metrics, report, alert data, and key plots"
                     )
                 else:
-                    st.button("📦 Bundle N/A", disabled=True, use_container_width=True,
+                    st.button("📦 Bundle N/A", disabled=True, width="stretch",
                              help="Run bundle not available for this run")
             except Exception as e:
-                st.button("📦 Bundle N/A", disabled=True, use_container_width=True)
+                st.button("📦 Bundle N/A", disabled=True, width="stretch")
 
         # Inline preview
         st.divider()
@@ -1592,7 +1594,7 @@ def render_analytics_tab():
                 textinfo="percent+label",
                 hovertemplate="<b>%{label}</b><br>Count: %{value:,}<br>Percent: %{percent}<extra></extra>"
             )
-            st.plotly_chart(fig_donut, use_container_width=True)
+            st.plotly_chart(fig_donut, width="stretch")
         else:
             st.warning("is_sar column not found in data")
 
@@ -1623,7 +1625,7 @@ def render_analytics_tab():
                 hovertemplate="<b>Type:</b> %{x}<br><b>Count:</b> %{y:,}<extra></extra>"
             )
             fig_bar.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width="stretch")
 
             # Heatmap: type x SAR counts
             st.subheader("Type x SAR Heatmap")
@@ -1641,7 +1643,7 @@ def render_analytics_tab():
             fig_heatmap.update_traces(
                 hovertemplate="<b>Type:</b> %{y}<br><b>Status:</b> %{x}<br><b>Count:</b> %{z:,}<extra></extra>"
             )
-            st.plotly_chart(fig_heatmap, use_container_width=True)
+            st.plotly_chart(fig_heatmap, width="stretch")
         elif type_col:
             st.warning("is_sar column not found for type analysis")
         else:
@@ -1694,7 +1696,7 @@ def render_analytics_tab():
                 fig_hist.update_traces(
                     hovertemplate="<b>Degree:</b> %{x}<br><b>Count:</b> %{y:,}<extra></extra>"
                 )
-                st.plotly_chart(fig_hist, use_container_width=True)
+                st.plotly_chart(fig_hist, width="stretch")
 
                 # Top 20 nodes by degree
                 st.subheader("Top 20 Nodes by Degree")
@@ -1729,7 +1731,7 @@ def render_analytics_tab():
                     hovertemplate=hover_template
                 )
                 fig_top_degree.update_layout(xaxis_tickangle=-45)
-                st.plotly_chart(fig_top_degree, use_container_width=True)
+                st.plotly_chart(fig_top_degree, width="stretch")
             else:
                 st.warning(f"Could not identify source/target columns in edges_td.csv. Found: {edges_df.columns.tolist()}")
         else:
@@ -1812,7 +1814,7 @@ def render_analytics_tab():
                         )
                         fig_pca.update_traces(marker=dict(size=5, opacity=0.7))
                         fig_pca.update_layout(legend_title_text="SAR Status")
-                        st.plotly_chart(fig_pca, use_container_width=True)
+                        st.plotly_chart(fig_pca, width="stretch")
 
                         st.caption(f"Explained variance: PC1={pca.explained_variance_ratio_[0]*100:.1f}%, PC2={pca.explained_variance_ratio_[1]*100:.1f}%")
                 else:
@@ -2056,7 +2058,7 @@ def render_interactive_dashboard_tab():
             x=RISK_LABELS, y=risk_counts.values, marker_color=RISK_COLORS,
             text=[f"{int(v):,}" for v in risk_counts.values], textposition="outside"))
         fig_risk_bar.update_layout(title="Risk Distribution", yaxis_title="Nodes", margin=dict(t=40, b=30))
-        col1.plotly_chart(fig_risk_bar, use_container_width=True)
+        col1.plotly_chart(fig_risk_bar, width="stretch")
 
         # Suspicious vs normal pie
         susp_vol = float(edges_df[edges_df["is_suspicious"]]["base_amt"].sum())
@@ -2066,7 +2068,7 @@ def render_interactive_dashboard_tab():
             marker_colors=[CLR["blue"], CLR["red"]], hole=0.45, textinfo="label+percent",
             hovertemplate="%{label}<br>$%{value:,.0f}<extra></extra>"))
         fig_pie.update_layout(title="Volume: Normal vs Suspicious", margin=dict(t=40, b=10))
-        col2.plotly_chart(fig_pie, use_container_width=True)
+        col2.plotly_chart(fig_pie, width="stretch")
 
         col3, col4 = st.columns(2)
 
@@ -2079,7 +2081,7 @@ def render_interactive_dashboard_tab():
             hovertemplate="Node: %{y}<br>Volume: $%{x:,.0f}<extra></extra>"))
         fig_top10.update_layout(title="Top 10 Risk Nodes by Volume", xaxis_title="Volume ($)",
                                 yaxis=dict(autorange="reversed"), margin=dict(t=40, b=30, l=160))
-        col3.plotly_chart(fig_top10, use_container_width=True)
+        col3.plotly_chart(fig_top10, width="stretch")
 
         # Anomaly score curve
         sorted_scores = np.sort(anomaly_scores)
@@ -2093,7 +2095,7 @@ def render_interactive_dashboard_tab():
                             annotation_text=f"Threshold {threshold_val:.6f}")
         fig_curve.update_layout(title="Anomaly Score Curve", xaxis_title="Nodes (sorted)",
                                 yaxis_title="Score", margin=dict(t=40, b=30))
-        col4.plotly_chart(fig_curve, use_container_width=True)
+        col4.plotly_chart(fig_curve, width="stretch")
 
     # ── TAB 2: Financial Impact ──
     with stab2:
@@ -2112,7 +2114,7 @@ def render_interactive_dashboard_tab():
                            y=["Actual Normal", "Actual AML"],
                            color_continuous_scale="RdYlGn_r", labels=dict(color="Count"))
         fig_cm.update_layout(title="Detection Matrix", margin=dict(t=40, b=30))
-        col1.plotly_chart(fig_cm, use_container_width=True)
+        col1.plotly_chart(fig_cm, width="stretch")
 
         # Waterfall
         fig_wf = go.Figure(go.Waterfall(
@@ -2127,7 +2129,7 @@ def render_interactive_dashboard_tab():
             texttemplate="$%{y:,.0f}", textposition="outside"))
         fig_wf.update_layout(title="Loss vs Savings Waterfall", yaxis_title="Amount ($)",
                              margin=dict(t=40, b=30))
-        col2.plotly_chart(fig_wf, use_container_width=True)
+        col2.plotly_chart(fig_wf, width="stretch")
 
         # Gauges
         fig_gauges = make_subplots(rows=1, cols=3, specs=[[{"type": "indicator"}] * 3],
@@ -2144,7 +2146,7 @@ def render_interactive_dashboard_tab():
                                   dict(range=[50, 80], color="rgba(255,255,0,0.10)"),
                                   dict(range=[80, 100], color="rgba(0,255,0,0.10)")])), row=1, col=i)
         fig_gauges.update_layout(height=280, margin=dict(t=40, b=10))
-        st.plotly_chart(fig_gauges, use_container_width=True)
+        st.plotly_chart(fig_gauges, width="stretch")
 
     # ── TAB 3: Network Graph ──
     with stab3:
@@ -2216,7 +2218,7 @@ def render_interactive_dashboard_tab():
                 xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                 yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                 margin=dict(t=40, b=10, l=10, r=10))
-            st.plotly_chart(fig_net, use_container_width=True)
+            st.plotly_chart(fig_net, width="stretch")
 
     # ── TAB 4: Transaction Deep Dive ──
     with stab4:
@@ -2234,7 +2236,7 @@ def render_interactive_dashboard_tab():
                                 labels={"base_amt": "Amount ($)"})
         fig_hist.update_layout(title=f"Amount Distribution ({len(filtered):,} txns)",
                                yaxis_type="log", yaxis_title="Count (log)", margin=dict(t=40, b=30))
-        col1.plotly_chart(fig_hist, use_container_width=True)
+        col1.plotly_chart(fig_hist, width="stretch")
 
         # Amount vs risk scatter
         samp = filtered.sample(min(5000, len(filtered)), random_state=42) if len(filtered) > 0 else filtered
@@ -2243,7 +2245,7 @@ def render_interactive_dashboard_tab():
                                  hover_data=["source", "target", "base_amt", "edge_risk"],
                                  labels={"base_amt": "Amount ($)", "edge_risk": "Risk"})
         fig_scatter.update_layout(title="Amount vs Risk", margin=dict(t=40, b=30))
-        col2.plotly_chart(fig_scatter, use_container_width=True)
+        col2.plotly_chart(fig_scatter, width="stretch")
 
         col3, col4 = st.columns(2)
 
@@ -2254,7 +2256,7 @@ def render_interactive_dashboard_tab():
                           color="base_amt", color_continuous_scale="Blues",
                           labels={"base_amt": "Volume ($)", "tx_type": "Tx Type"})
         fig_type.update_layout(title="Volume by Transaction Type", margin=dict(t=40, b=30))
-        col3.plotly_chart(fig_type, use_container_width=True)
+        col3.plotly_chart(fig_type, width="stretch")
 
         # Risk heatmap
         if nodes_df is not None and "source_type" in edges_df.columns:
@@ -2265,7 +2267,7 @@ def render_interactive_dashboard_tab():
                                x=[f"Type {c}" for c in hm.columns],
                                y=[f"Type {i}" for i in hm.index], text_auto=".3f")
             fig_hm.update_layout(title="Avg Risk by Node-Type Pair", margin=dict(t=40, b=30))
-            col4.plotly_chart(fig_hm, use_container_width=True)
+            col4.plotly_chart(fig_hm, width="stretch")
 
     # ── TAB 5: Node Risk Profiles ──
     with stab5:
@@ -2281,7 +2283,7 @@ def render_interactive_dashboard_tab():
                              annotation_text=f"P{p}: {val:.3f}")
         fig_rh.update_layout(title="Risk Score Distribution", xaxis_title="Risk Score",
                              yaxis_title="Nodes", margin=dict(t=40, b=30))
-        col1.plotly_chart(fig_rh, use_container_width=True)
+        col1.plotly_chart(fig_rh, width="stretch")
 
         # Volume vs risk scatter
         fig_vr = px.scatter(node_money, x="total_volume", y="risk_score",
@@ -2289,7 +2291,7 @@ def render_interactive_dashboard_tab():
                             hover_data=["id", "total_volume", "total_transactions", "risk_score"],
                             labels={"total_volume": "Volume ($)", "risk_score": "Risk Score", "is_anomaly": "Anomaly"})
         fig_vr.update_layout(title="Volume vs Risk", margin=dict(t=40, b=30))
-        col2.plotly_chart(fig_vr, use_container_width=True)
+        col2.plotly_chart(fig_vr, width="stretch")
 
         # Top 20 table
         st.subheader("Top 20 Highest Risk Nodes")
@@ -2299,7 +2301,7 @@ def render_interactive_dashboard_tab():
         top20["total_volume"] = top20["total_volume"].apply(lambda x: f"${x:,.0f}")
         top20["net_flow"] = top20["net_flow"].apply(lambda x: f"${x:,.0f}")
         top20["total_transactions"] = top20["total_transactions"].astype(int)
-        st.dataframe(top20, use_container_width=True, hide_index=True)
+        st.dataframe(top20, width="stretch", hide_index=True)
 
         col3, col4, col5 = st.columns(3)
 
@@ -2309,7 +2311,7 @@ def render_interactive_dashboard_tab():
                              color="type", color_discrete_sequence=px.colors.qualitative.Set2,
                              labels={"type": "Node Type", "risk_score": "Risk Score"})
             fig_box.update_layout(title="Risk by Node Type", showlegend=False, margin=dict(t=40, b=30))
-            col3.plotly_chart(fig_box, use_container_width=True)
+            col3.plotly_chart(fig_box, width="stretch")
 
         # Radar chart
         high_risk = node_money[node_money["risk_score"] > 0.75]
@@ -2342,7 +2344,7 @@ def render_interactive_dashboard_tab():
         fig_radar.update_layout(title="Risk Profile Comparison",
                                 polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
                                 margin=dict(t=50, b=30))
-        col4.plotly_chart(fig_radar, use_container_width=True)
+        col4.plotly_chart(fig_radar, width="stretch")
 
         # Lorenz curve
         sorted_by_risk = node_money.sort_values("risk_score")
@@ -2357,7 +2359,7 @@ def render_interactive_dashboard_tab():
         fig_lorenz.update_layout(title="Risk Concentration (Lorenz)",
                                  xaxis_title="Cumulative % Nodes", yaxis_title="Cumulative % Volume",
                                  margin=dict(t=40, b=30))
-        col5.plotly_chart(fig_lorenz, use_container_width=True)
+        col5.plotly_chart(fig_lorenz, width="stretch")
 
 
 # --- Sidebar ---
@@ -2370,25 +2372,15 @@ def render_sidebar():
 
         # System Status
         st.subheader("System Status")
-        health = api_request("GET", "/status/health")
+        # Use lightweight /ping (no Celery/DB check) to avoid 5s+ blocking
+        ping = api_request("GET", "/ping", timeout=3)
 
-        if health:
-            status_col1, status_col2 = st.columns(2)
-            with status_col1:
-                if health.get("database") == "healthy":
-                    st.success("DB ✓")
-                else:
-                    st.error("DB ✗")
-            with status_col2:
-                celery_status = health.get("celery", "unknown")
-                if celery_status == "healthy":
-                    st.success("Worker ✓")
-                elif celery_status == "no_workers":
-                    st.warning("No Workers")
-                else:
-                    st.error("Worker ✗")
+        if ping:
+            st.success("API Online")
         else:
             st.error("API Offline")
+            if st.button("Retry Connection"):
+                st.rerun()
             st.markdown("Start the API server:")
             st.code("uvicorn app.api.main:app --reload", language="bash")
 
@@ -2451,6 +2443,986 @@ def render_sidebar():
             """)
 
 
+# --- Tier Queue Tab ---
+
+def render_tier_queue_tab():
+    """Render the Tier Queue tab with risk-ranked entities."""
+    st.header("Tier Queue — Risk-Ranked Entities")
+
+    # Run selector (same pattern as Analytics tab)
+    runs = api_request("GET", "/runs/?limit=15")
+    if not runs:
+        st.info("No pipeline runs found. Start a run first.")
+        return
+
+    completed_runs = [r for r in runs if r["status"] == "completed"]
+    if not completed_runs:
+        st.info("No completed runs found. Complete a pipeline run to view the risk queue.")
+        return
+
+    run_options = {
+        f"{r['id'][:8]}... - {format_datetime(r.get('completed_at') or r['created_at'])}": r["id"]
+        for r in completed_runs
+    }
+
+    selected_label = st.selectbox(
+        "Select Run", options=list(run_options.keys()), key="tier_queue_run_select"
+    )
+    selected_run_id = run_options[selected_label]
+
+    # Load summary
+    summary = api_request("GET", f"/runs/{selected_run_id}/risk-summary")
+    if not summary or summary.get("detail"):
+        st.warning(
+            "Risk queue not available for this run. "
+            "Re-run the pipeline or ensure `data/alert_nodes_td.csv` exists."
+        )
+        return
+
+    # --- Label sparse warning ---
+    sar_stats = summary.get("sar_label_stats", {})
+    if sar_stats.get("label_sparse", False):
+        sar_ct = sar_stats.get("sar_count", 0)
+        sar_rt = sar_stats.get("sar_rate_pct", 0)
+        st.warning(
+            f"**Labels are sparse:** Only {sar_ct} SAR-labelled entities "
+            f"({sar_rt:.3f}% of total). Risk ranking relies primarily on "
+            f"network connectivity (degree). Consider enriching labels or "
+            f"using a larger sample size for more robust scoring."
+        )
+
+    # --- Filter controls ---
+    st.markdown("---")
+    col_tier, col_pct, col_type, col_sar, col_search = st.columns([1.2, 1.2, 1.2, 1, 1.4])
+
+    tier_counts = summary.get("tier_counts", {})
+
+    with col_tier:
+        tier_labels = [
+            f"T1 ({tier_counts.get('T1', 0)})",
+            f"T2 ({tier_counts.get('T2', 0)})",
+            f"T3 ({tier_counts.get('T3', 0)})",
+            f"T4 ({tier_counts.get('T4', 0)})",
+        ]
+        tier_values = ["T1", "T2", "T3", "T4"]
+        selected_tier_labels = st.multiselect(
+            "Tier Filter",
+            options=tier_labels,
+            default=[tier_labels[0], tier_labels[1]],
+            key="tq_tier",
+        )
+        # Map labels back to values
+        selected_tiers = [
+            tier_values[tier_labels.index(lbl)]
+            for lbl in selected_tier_labels
+            if lbl in tier_labels
+        ]
+
+    with col_pct:
+        max_percentile = st.slider(
+            "Investigate Top X%", min_value=0.5, max_value=100.0,
+            value=5.0, step=0.5, key="tq_pct",
+        )
+
+    with col_type:
+        # Gather entity types from summary
+        all_types = set()
+        for tier_types in summary.get("top_types_per_tier", {}).values():
+            all_types.update(tier_types.keys())
+        all_types = sorted(all_types)
+        selected_types = st.multiselect(
+            "Entity Types", options=all_types, default=[], key="tq_etype",
+        )
+
+    with col_sar:
+        sar_option = st.radio(
+            "SAR Filter", ["All", "SAR Only", "Non-SAR"], key="tq_sar",
+        )
+
+    with col_search:
+        search_text = st.text_input(
+            "Search Entity ID", value="", key="tq_search",
+        )
+
+    # --- Reasons filter ---
+    reason_options = ["SAR_LABEL", "HIGH_CONNECTIVITY"]
+    selected_reasons = st.multiselect(
+        "Filter by Reasons", options=reason_options, default=[], key="tq_reasons",
+    )
+
+    # --- Build query params ---
+    params = {"limit": 500, "offset": 0, "max_percentile": max_percentile}
+    if selected_tiers:
+        params["tier"] = selected_tiers
+    if selected_types:
+        params["entity_type"] = selected_types
+    if sar_option == "SAR Only":
+        params["is_sar"] = 1
+    elif sar_option == "Non-SAR":
+        params["is_sar"] = 0
+    if search_text.strip():
+        params["search"] = search_text.strip()
+
+    # Fetch filtered queue
+    queue_data = api_request("GET", f"/runs/{selected_run_id}/risk-queue", params=params)
+    if not queue_data or queue_data.get("detail"):
+        st.warning("Could not load risk queue data.")
+        return
+
+    rows = queue_data.get("rows", [])
+
+    # Client-side reasons filter
+    if selected_reasons and rows:
+        rows = [
+            r for r in rows
+            if any(reason in (r.get("reasons") or "") for reason in selected_reasons)
+        ]
+
+    total_filtered = len(rows)
+
+    # --- KPI cards ---
+    st.markdown("---")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+    with kpi1:
+        st.metric("Total Entities", f"{summary.get('total_entities', 0):,}")
+    with kpi2:
+        st.metric("Filtered Results", f"{total_filtered:,}")
+    with kpi3:
+        sar_count = summary.get("sar_count", 0)
+        st.metric("SAR-Labelled", f"{sar_count:,}")
+    with kpi4:
+        # Top entity type in filtered results
+        if rows:
+            type_counts = {}
+            for row in rows:
+                t = row.get("entity_type", "unknown")
+                type_counts[t] = type_counts.get(t, 0) + 1
+            top_type = max(type_counts, key=type_counts.get)
+            st.metric("Top Type (filtered)", str(top_type))
+        else:
+            st.metric("Top Type (filtered)", "N/A")
+
+    # --- Tier breakdown bar ---
+    tier_cols = st.columns(4)
+    tier_colors = {"T1": "#EF4444", "T2": "#F59E0B", "T3": "#3B82F6", "T4": "#6B7280"}
+    for i, tier_name in enumerate(["T1", "T2", "T3", "T4"]):
+        with tier_cols[i]:
+            count = tier_counts.get(tier_name, 0)
+            pct = (count / max(summary.get("total_entities", 1), 1)) * 100
+            color = tier_colors[tier_name]
+            st.markdown(
+                f"<div style='text-align:center;padding:0.5rem;border-radius:6px;"
+                f"border:1px solid {color};'>"
+                f"<span style='color:{color};font-weight:700;font-size:1.1rem;'>{tier_name}</span><br>"
+                f"<span style='color:#E5E7EB;font-size:1.3rem;font-weight:600;'>{count:,}</span><br>"
+                f"<span style='color:#9CA3AF;font-size:0.85rem;'>{pct:.1f}%</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("")
+
+    # --- Data table ---
+    if rows:
+        df = pd.DataFrame(rows)
+
+        # Column ordering
+        display_cols = [
+            c for c in ["rank", "tier", "entity_id", "entity_type", "is_sar",
+                         "risk_score", "degree", "percentile", "reasons"]
+            if c in df.columns
+        ]
+        df = df[display_cols]
+
+        # Format risk_score and percentile
+        if "risk_score" in df.columns:
+            df["risk_score"] = df["risk_score"].round(4)
+        if "percentile" in df.columns:
+            df["percentile"] = df["percentile"].round(2)
+
+        st.dataframe(
+            df,
+            width="stretch",
+            height=500,
+            column_config={
+                "rank": st.column_config.NumberColumn("Rank", format="%d"),
+                "tier": st.column_config.TextColumn("Tier"),
+                "entity_id": st.column_config.TextColumn("Entity ID"),
+                "entity_type": st.column_config.TextColumn("Type"),
+                "is_sar": st.column_config.NumberColumn("SAR", format="%d"),
+                "risk_score": st.column_config.NumberColumn("Risk Score", format="%.4f"),
+                "degree": st.column_config.NumberColumn("Degree", format="%d"),
+                "percentile": st.column_config.NumberColumn("Pctile %", format="%.2f"),
+                "reasons": st.column_config.TextColumn("Reasons"),
+            },
+        )
+
+        # Download button
+        csv_data = df.to_csv(index=False)
+        st.download_button(
+            label="Download Filtered Queue (CSV)",
+            data=csv_data,
+            file_name=f"risk_queue_{selected_run_id[:8]}_filtered.csv",
+            mime="text/csv",
+            key="tq_download",
+        )
+    else:
+        st.info("No entities match the current filters.")
+
+    # --- Operating Point Panel ---
+    st.markdown("---")
+    st.subheader("Operating Point")
+
+    # Load existing operating point if saved
+    saved_op = api_request("GET", f"/runs/{selected_run_id}/operating-point")
+
+    op_col1, op_col2 = st.columns([2, 1])
+    with op_col1:
+        if saved_op and not saved_op.get("detail"):
+            saved_payload = saved_op.get("payload", {})
+            saved_at = saved_op.get("saved_at", "")
+            st.markdown(
+                f"**Saved:** {saved_at[:19]}Z &nbsp;|&nbsp; "
+                f"Top {saved_payload.get('top_percent', '?')}% &nbsp;|&nbsp; "
+                f"Tiers: {', '.join(saved_payload.get('tiers', []))} &nbsp;|&nbsp; "
+                f"SAR: {saved_payload.get('sar_filter', 'All')}"
+            )
+        else:
+            st.caption("No operating point saved for this run yet.")
+
+    with op_col2:
+        if st.button("Save Operating Point", key="tq_save_op"):
+            op_body = {
+                "top_percent": max_percentile,
+                "tiers": selected_tiers if selected_tiers else ["T1", "T2", "T3", "T4"],
+                "entity_types": selected_types,
+                "sar_filter": sar_option,
+                "search": search_text.strip(),
+            }
+            result = api_request("POST", f"/runs/{selected_run_id}/operating-point", json=op_body)
+            if result and not result.get("detail"):
+                st.success("Operating point saved.")
+            else:
+                detail = result.get("detail", "Unknown error") if result else "API unavailable"
+                st.error(f"Failed to save: {detail}")
+
+    # Score distribution chart
+    if rows and len(rows) > 5:
+        st.markdown("---")
+        st.subheader("Risk Score Distribution")
+        df_chart = pd.DataFrame(rows)
+        if "risk_score" in df_chart.columns and "tier" in df_chart.columns:
+            fig = px.histogram(
+                df_chart,
+                x="risk_score",
+                color="tier",
+                nbins=40,
+                color_discrete_map=tier_colors,
+                labels={"risk_score": "Risk Score", "tier": "Tier"},
+            )
+            apply_modern_terminal_plotly()
+            fig.update_layout(
+                height=340,
+                margin=dict(l=40, r=20, t=30, b=40),
+                barmode="overlay",
+                legend=dict(orientation="h", y=1.08),
+            )
+            fig.update_traces(opacity=0.75)
+            st.plotly_chart(fig, width="stretch")
+
+
+# --- Cases Tab ---
+
+def render_cases_tab():
+    """Render the Cases tab for investigation-ready AML cases."""
+    st.header("Investigation Cases")
+
+    # Run selector
+    runs = api_request("GET", "/runs/?limit=15")
+    if not runs:
+        st.info("No pipeline runs found. Start a run first.")
+        return
+
+    completed_runs = [r for r in runs if r["status"] == "completed"]
+    if not completed_runs:
+        st.info("No completed runs found. Complete a pipeline run to view cases.")
+        return
+
+    run_options = {
+        f"{r['id'][:8]}... - {format_datetime(r.get('completed_at') or r['created_at'])}": r["id"]
+        for r in completed_runs
+    }
+
+    selected_label = st.selectbox(
+        "Select Run", options=list(run_options.keys()), key="cases_run_select"
+    )
+    selected_run_id = run_options[selected_label]
+
+    # Load cases summary
+    summary = api_request("GET", f"/runs/{selected_run_id}/cases/summary")
+    if not summary or summary.get("detail"):
+        st.warning("Cases not available for this run. Re-run the pipeline to generate cases.")
+        return
+
+    total_cases = summary.get("total_cases", 0)
+    if total_cases == 0:
+        st.info("No cases generated — no seed entities matched the operating point criteria.")
+        return
+
+    # --- KPI cards ---
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    with kpi1:
+        st.metric("Total Cases", f"{total_cases:,}")
+    with kpi2:
+        st.metric("Seed Entities", f"{summary.get('seed_count', 0):,}")
+    with kpi3:
+        st.metric("Entities in Cases", f"{summary.get('total_entities_in_cases', 0):,}")
+    with kpi4:
+        st.metric("SARs in Cases", f"{summary.get('total_sar_in_cases', 0):,}")
+
+    # Typology counts bar
+    typology_counts = summary.get("typology_counts", {})
+    if typology_counts:
+        typ_cols = st.columns(len(typology_counts))
+        typ_colors = {
+            "FAN_OUT": "#F59E0B", "FAN_IN": "#3B82F6", "CIRCULAR_FLOW": "#EF4444",
+            "HUB_DOMINANCE": "#8B5CF6", "SAR_PROXIMITY": "#22C55E",
+        }
+        for i, (typ_name, typ_count) in enumerate(sorted(typology_counts.items())):
+            with typ_cols[i]:
+                color = typ_colors.get(typ_name, "#9CA3AF")
+                st.markdown(
+                    f"<div style='text-align:center;padding:0.4rem;border-radius:6px;"
+                    f"border:1px solid {color};'>"
+                    f"<span style='color:{color};font-weight:600;font-size:0.85rem;'>"
+                    f"{typ_name}</span><br>"
+                    f"<span style='color:#E5E7EB;font-size:1.2rem;font-weight:700;'>"
+                    f"{typ_count}</span></div>",
+                    unsafe_allow_html=True,
+                )
+
+    st.markdown("---")
+
+    # --- Filters ---
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+    with filter_col1:
+        tier_filter = st.multiselect(
+            "Tier Filter", ["T1", "T2", "T3", "T4"], default=[], key="cases_tier",
+        )
+    with filter_col2:
+        typology_options = sorted(typology_counts.keys()) if typology_counts else []
+        typology_filter = st.multiselect(
+            "Typology Filter", typology_options, default=[], key="cases_typology",
+        )
+    with filter_col3:
+        min_entities = st.number_input(
+            "Min Entities", min_value=1, value=1, step=1, key="cases_min_ent",
+        )
+
+    # Build query params
+    params = {"limit": 200, "offset": 0}
+    if tier_filter:
+        params["tier"] = tier_filter
+    if typology_filter:
+        params["typology"] = typology_filter
+    if min_entities > 1:
+        params["min_entities"] = min_entities
+
+    # Fetch case list
+    cases_data = api_request("GET", f"/runs/{selected_run_id}/cases", params=params)
+    if not cases_data or cases_data.get("detail"):
+        st.warning("Could not load cases.")
+        return
+
+    cases_list = cases_data.get("cases", [])
+
+    if not cases_list:
+        st.info("No cases match the current filters.")
+        return
+
+    # --- Case list table ---
+    cases_df = pd.DataFrame(cases_list)
+    display_cols = [
+        c for c in ["case_id", "tier", "risk_score", "entity_count", "edge_count",
+                     "sar_count", "typologies", "seed_count"]
+        if c in cases_df.columns
+    ]
+    cases_df_display = cases_df[display_cols].copy()
+    if "case_id" in cases_df_display.columns:
+        cases_df_display["case_id"] = cases_df_display["case_id"].str[:12] + "..."
+    if "risk_score" in cases_df_display.columns:
+        cases_df_display["risk_score"] = cases_df_display["risk_score"].round(4)
+
+    st.dataframe(
+        cases_df_display,
+        width="stretch",
+        height=min(400, 35 * len(cases_df_display) + 60),
+        column_config={
+            "case_id": st.column_config.TextColumn("Case ID"),
+            "tier": st.column_config.TextColumn("Tier"),
+            "risk_score": st.column_config.NumberColumn("Risk Score", format="%.4f"),
+            "entity_count": st.column_config.NumberColumn("Entities", format="%d"),
+            "edge_count": st.column_config.NumberColumn("Edges", format="%d"),
+            "sar_count": st.column_config.NumberColumn("SARs", format="%d"),
+            "typologies": st.column_config.TextColumn("Typologies"),
+            "seed_count": st.column_config.NumberColumn("Seeds", format="%d"),
+        },
+    )
+
+    # --- Case detail view ---
+    st.markdown("---")
+    st.subheader("Case Detail")
+
+    case_ids_full = cases_df["case_id"].tolist() if "case_id" in cases_df.columns else []
+    if not case_ids_full:
+        return
+
+    case_select_options = {
+        f"{cid[:12]}... (Tier {cases_df.iloc[i].get('tier', '?')}, "
+        f"{cases_df.iloc[i].get('entity_count', 0)} entities)": cid
+        for i, cid in enumerate(case_ids_full)
+    }
+
+    selected_case_label = st.selectbox(
+        "Select Case to Inspect", options=list(case_select_options.keys()),
+        key="cases_detail_select",
+    )
+    selected_case_id = case_select_options[selected_case_label]
+
+    case_detail = api_request("GET", f"/runs/{selected_run_id}/cases/{selected_case_id}")
+    if not case_detail or case_detail.get("detail"):
+        st.warning("Could not load case detail.")
+        return
+
+    # Stats row
+    stat1, stat2, stat3, stat4 = st.columns(4)
+    with stat1:
+        st.metric("Entities", case_detail.get("entity_count", 0))
+    with stat2:
+        st.metric("Edges", case_detail.get("edge_count", 0))
+    with stat3:
+        st.metric("SARs", case_detail.get("sar_count", 0))
+    with stat4:
+        st.metric("Risk Score", f"{case_detail.get('risk_score', 0):.4f}")
+
+    # Typology badges
+    case_typologies = case_detail.get("typologies", [])
+    if case_typologies:
+        badge_html = " ".join(
+            f"<span style='display:inline-block;padding:0.25rem 0.6rem;"
+            f"border-radius:12px;background:{typ_colors.get(t, '#374151')}22;"
+            f"color:{typ_colors.get(t, '#9CA3AF')};font-weight:600;"
+            f"font-size:0.85rem;margin-right:0.4rem;border:1px solid "
+            f"{typ_colors.get(t, '#374151')};'>{t}</span>"
+            for t in case_typologies
+        )
+        st.markdown(f"**Typologies:** {badge_html}", unsafe_allow_html=True)
+
+    # Reasons
+    case_reasons = case_detail.get("reasons", [])
+    if case_reasons:
+        st.markdown(f"**Reasons:** {', '.join(case_reasons)}")
+
+    # Entity table
+    entities = case_detail.get("entities", [])
+    if entities:
+        st.markdown("**Entities:**")
+        ent_df = pd.DataFrame(entities)
+        ent_display = [
+            c for c in ["entity_id", "entity_type", "is_seed", "is_sar",
+                         "risk_score", "tier", "degree"]
+            if c in ent_df.columns
+        ]
+        ent_df = ent_df[ent_display]
+        if "risk_score" in ent_df.columns:
+            ent_df["risk_score"] = ent_df["risk_score"].round(4)
+        st.dataframe(ent_df, width="stretch", height=250)
+
+    # Interactive network graph (Plotly)
+    edges = case_detail.get("edges", [])
+    if entities and len(entities) > 1:
+        st.markdown("**Network Graph:**")
+        _render_case_network(entities, edges, case_typologies)
+
+    # Download case JSON
+    case_json_str = json.dumps(case_detail, indent=2)
+    st.download_button(
+        label="Download Case JSON",
+        data=case_json_str,
+        file_name=f"case_{selected_case_id[:12]}.json",
+        mime="application/json",
+        key="cases_download",
+    )
+
+
+def _render_case_network(entities: list, edges: list, typologies: list):
+    """Render an interactive Plotly network graph for a case."""
+    import math
+
+    node_ids = [e["entity_id"] for e in entities]
+    node_map = {nid: i for i, nid in enumerate(node_ids)}
+    n = len(node_ids)
+
+    # Circular layout
+    positions = {}
+    for i, nid in enumerate(node_ids):
+        angle = 2 * math.pi * i / n
+        positions[nid] = (math.cos(angle), math.sin(angle))
+
+    # Edge traces
+    edge_x, edge_y = [], []
+    for e in edges:
+        src, dst = e.get("src"), e.get("dst")
+        if src in positions and dst in positions:
+            x0, y0 = positions[src]
+            x1, y1 = positions[dst]
+            edge_x.extend([x0, x1, None])
+            edge_y.extend([y0, y1, None])
+
+    edge_trace = go.Scatter(
+        x=edge_x, y=edge_y,
+        mode="lines",
+        line=dict(width=0.8, color="#4B5563"),
+        hoverinfo="none",
+    )
+
+    # Node traces
+    node_x = [positions[nid][0] for nid in node_ids]
+    node_y = [positions[nid][1] for nid in node_ids]
+    node_colors = []
+    node_sizes = []
+    node_texts = []
+
+    for e in entities:
+        if e.get("is_seed"):
+            node_colors.append("#EF4444" if e.get("is_sar") else "#FBBF24")
+            node_sizes.append(14)
+        elif e.get("is_sar"):
+            node_colors.append("#22C55E")
+            node_sizes.append(11)
+        else:
+            node_colors.append("#6B7280")
+            node_sizes.append(8)
+        node_texts.append(
+            f"ID: {e['entity_id'][:12]}<br>"
+            f"Type: {e.get('entity_type', '?')}<br>"
+            f"Tier: {e.get('tier', '?')}<br>"
+            f"Score: {e.get('risk_score', 0):.4f}<br>"
+            f"Degree: {e.get('degree', 0)}<br>"
+            f"SAR: {'Yes' if e.get('is_sar') else 'No'}<br>"
+            f"Seed: {'Yes' if e.get('is_seed') else 'No'}"
+        )
+
+    node_trace = go.Scatter(
+        x=node_x, y=node_y,
+        mode="markers",
+        marker=dict(size=node_sizes, color=node_colors, line=dict(width=1, color="#1F2937")),
+        text=node_texts,
+        hoverinfo="text",
+    )
+
+    fig = go.Figure(data=[edge_trace, node_trace])
+    apply_modern_terminal_plotly()
+    fig.update_layout(
+        showlegend=False,
+        height=450,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+    )
+
+    # Legend annotation
+    legend_text = (
+        "<span style='color:#FBBF24'>● Seed</span> &nbsp; "
+        "<span style='color:#EF4444'>● Seed+SAR</span> &nbsp; "
+        "<span style='color:#22C55E'>● SAR</span> &nbsp; "
+        "<span style='color:#6B7280'>● Other</span>"
+    )
+    st.markdown(legend_text, unsafe_allow_html=True)
+    st.plotly_chart(fig, width="stretch")
+
+
+# --- AML Scores Tab ---
+
+def render_aml_scores_tab():
+    """Render the AML Scores tab with composite risk scores per party."""
+    st.header("AML Risk Scores — Composite Party Scoring")
+
+    # Run selector
+    runs = api_request("GET", "/runs/?limit=15")
+    if not runs:
+        st.info("No pipeline runs found. Start a run first.")
+        return
+
+    completed_runs = [r for r in runs if r["status"] == "completed"]
+    if not completed_runs:
+        st.info("No completed runs found. Complete a pipeline run to view AML scores.")
+        return
+
+    run_options = {
+        f"{r['id'][:8]}... - {format_datetime(r.get('completed_at') or r['created_at'])}": r["id"]
+        for r in completed_runs
+    }
+
+    selected_label = st.selectbox(
+        "Select Run", options=list(run_options.keys()), key="aml_scores_run_select"
+    )
+    selected_run_id = run_options[selected_label]
+
+    # Load summary (or offer to compute)
+    summary = api_request("GET", f"/runs/{selected_run_id}/aml-summary")
+    if not summary or summary.get("detail"):
+        st.info("AML scores have not been computed for this run yet.")
+        if st.button("Compute AML Scores", key="aml_compute_init"):
+            with st.spinner("Computing AML scores..."):
+                result = api_request("POST", f"/runs/{selected_run_id}/aml-scores/compute")
+            if result and not result.get("detail"):
+                st.success(
+                    f"AML scores computed for {result.get('total_scored', '?')} parties. "
+                    "Refresh the page to view results."
+                )
+                st.rerun()
+            else:
+                detail = result.get("detail", "Unknown error") if result else "API unavailable"
+                st.error(f"Scoring failed: {detail}")
+        return
+
+    band_dist = summary.get("band_distribution", {})
+    band_colors = {
+        "Critical": "#EF4444", "High": "#F59E0B",
+        "Medium": "#3B82F6", "Low": "#6B7280",
+    }
+
+    # Degraded mode notice
+    signals_available = summary.get("signals_available", [])
+    all_signals = {"sar", "laundering", "network", "geo", "volume"}
+    missing_signals = all_signals - set(signals_available)
+    if missing_signals:
+        missing_labels = ", ".join(sorted(missing_signals))
+        st.warning(
+            f"**Degraded scoring mode:** {len(signals_available)}/5 signals active "
+            f"({', '.join(signals_available)}). "
+            f"Missing signals ({missing_labels}) require enrichment data "
+            f"(`extra_info.csv`). Band distribution may show empty bands."
+        )
+
+    # --- Filter controls ---
+    st.markdown("---")
+    col_band, col_score, col_sar, col_laun, col_search = st.columns([1.5, 1.5, 1, 1, 1.5])
+
+    with col_band:
+        band_labels = [
+            f"Critical ({band_dist.get('Critical', 0)})",
+            f"High ({band_dist.get('High', 0)})",
+            f"Medium ({band_dist.get('Medium', 0)})",
+            f"Low ({band_dist.get('Low', 0)})",
+        ]
+        band_values = ["Critical", "High", "Medium", "Low"]
+        selected_band_labels = st.multiselect(
+            "Risk Band", options=band_labels,
+            default=[band_labels[0], band_labels[1]],
+            key="aml_band",
+        )
+        selected_bands = [
+            band_values[band_labels.index(lbl)]
+            for lbl in selected_band_labels if lbl in band_labels
+        ]
+
+    with col_score:
+        score_range = st.slider(
+            "Score Range", min_value=0.0, max_value=100.0,
+            value=(0.0, 100.0), step=1.0, key="aml_score_range",
+        )
+
+    with col_sar:
+        sar_option = st.radio(
+            "SAR Filter", ["All", "SAR Only", "Non-SAR"], key="aml_sar",
+        )
+
+    with col_laun:
+        laun_option = st.radio(
+            "Laundering", ["All", "Has Laundering"], key="aml_laun",
+        )
+
+    with col_search:
+        search_text = st.text_input(
+            "Search Entity ID", value="", key="aml_search",
+        )
+
+    # Sort controls
+    sort_col1, sort_col2 = st.columns([1, 1])
+    with sort_col1:
+        sort_by = st.selectbox(
+            "Sort By",
+            options=["aml_score", "sar_signal", "laundering_signal",
+                     "network_signal", "geo_signal", "volume_signal",
+                     "txn_count", "total_amt"],
+            index=0, key="aml_sort_by",
+        )
+    with sort_col2:
+        sort_order = st.selectbox(
+            "Order", options=["desc", "asc"], index=0, key="aml_sort_order",
+        )
+
+    # Build query params
+    params = {
+        "limit": 500, "offset": 0,
+        "sort_by": sort_by, "sort_order": sort_order,
+    }
+    if selected_bands:
+        params["band"] = selected_bands
+    if score_range[0] > 0:
+        params["min_score"] = score_range[0]
+    if score_range[1] < 100:
+        params["max_score"] = score_range[1]
+    if sar_option == "SAR Only":
+        params["is_sar"] = 1
+    elif sar_option == "Non-SAR":
+        params["is_sar"] = 0
+    if laun_option == "Has Laundering":
+        params["has_laundering"] = 1
+    if search_text.strip():
+        params["search"] = search_text.strip()
+
+    # Fetch filtered scores
+    score_data = api_request("GET", f"/runs/{selected_run_id}/aml-scores", params=params)
+    if not score_data or score_data.get("detail"):
+        st.warning("Could not load AML score data.")
+        return
+
+    rows = score_data.get("rows", [])
+    total_filtered = len(rows)
+
+    # --- KPI cards + recompute ---
+    st.markdown("---")
+    kpi1, kpi2, kpi3, kpi4, kpi5, kpi_btn = st.columns([1, 1, 1, 1, 1, 0.8])
+
+    with kpi1:
+        st.metric("Total Scored", f"{summary.get('total_scored', 0):,}")
+    with kpi2:
+        st.metric("Filtered", f"{total_filtered:,}")
+    with kpi3:
+        st.metric("Mean Score", f"{summary.get('mean_score', 0):.1f}")
+    with kpi4:
+        critical_ct = band_dist.get("Critical", 0)
+        high_ct = band_dist.get("High", 0)
+        st.metric("Critical + High", f"{critical_ct + high_ct:,}")
+    with kpi5:
+        st.metric("Median Score", f"{summary.get('median_score', 0):.1f}")
+    with kpi_btn:
+        st.caption("")  # spacer for alignment
+        if st.button("Recompute", key="aml_recompute"):
+            with st.spinner("Recomputing AML scores..."):
+                result = api_request("POST", f"/runs/{selected_run_id}/aml-scores/compute")
+            if result and not result.get("detail"):
+                st.success("Scores recomputed.")
+                st.rerun()
+            else:
+                detail = result.get("detail", "Unknown error") if result else "API unavailable"
+                st.error(f"Failed: {detail}")
+
+    # --- Band breakdown ---
+    band_cols = st.columns(4)
+    for i, band_name in enumerate(["Critical", "High", "Medium", "Low"]):
+        with band_cols[i]:
+            count = band_dist.get(band_name, 0)
+            total_scored = max(summary.get("total_scored", 1), 1)
+            pct = (count / total_scored) * 100
+            color = band_colors[band_name]
+            st.markdown(
+                f"<div style='text-align:center;padding:0.5rem;border-radius:6px;"
+                f"border:1px solid {color};'>"
+                f"<span style='color:{color};font-weight:700;font-size:1.1rem;'>{band_name}</span><br>"
+                f"<span style='color:#E5E7EB;font-size:1.3rem;font-weight:600;'>{count:,}</span><br>"
+                f"<span style='color:#9CA3AF;font-size:0.85rem;'>{pct:.1f}%</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+    st.markdown("")
+
+    # --- Data table ---
+    if rows:
+        df = pd.DataFrame(rows)
+
+        display_cols = [
+            c for c in [
+                "entity_id", "risk_band", "aml_score", "is_sar",
+                "sar_signal", "laundering_signal", "network_signal",
+                "geo_signal", "volume_signal",
+                "degree", "txn_count", "total_amt",
+                "laundering_txn_count", "cross_border_count",
+                "reasons",
+            ]
+            if c in df.columns
+        ]
+        df_display = df[display_cols].copy()
+
+        # Round numeric columns
+        for col in ["aml_score", "sar_signal", "laundering_signal",
+                     "network_signal", "geo_signal", "volume_signal", "total_amt"]:
+            if col in df_display.columns:
+                df_display[col] = df_display[col].round(3)
+
+        st.dataframe(
+            df_display,
+            width="stretch",
+            height=500,
+            column_config={
+                "entity_id": st.column_config.TextColumn("Entity ID"),
+                "risk_band": st.column_config.TextColumn("Band"),
+                "aml_score": st.column_config.NumberColumn("AML Score", format="%.1f"),
+                "is_sar": st.column_config.NumberColumn("SAR", format="%d"),
+                "sar_signal": st.column_config.NumberColumn("SAR Sig", format="%.3f"),
+                "laundering_signal": st.column_config.NumberColumn("Laun Sig", format="%.3f"),
+                "network_signal": st.column_config.NumberColumn("Net Sig", format="%.3f"),
+                "geo_signal": st.column_config.NumberColumn("Geo Sig", format="%.3f"),
+                "volume_signal": st.column_config.NumberColumn("Vol Sig", format="%.3f"),
+                "degree": st.column_config.NumberColumn("Degree", format="%d"),
+                "txn_count": st.column_config.NumberColumn("Txn Count", format="%d"),
+                "total_amt": st.column_config.NumberColumn("Total Amt", format="%.2f"),
+                "laundering_txn_count": st.column_config.NumberColumn("Laun Txns", format="%d"),
+                "cross_border_count": st.column_config.NumberColumn("Cross-Border", format="%d"),
+                "reasons": st.column_config.TextColumn("Reasons"),
+            },
+        )
+
+        # Download
+        csv_data = df_display.to_csv(index=False)
+        st.download_button(
+            label="Download Filtered AML Scores (CSV)",
+            data=csv_data,
+            file_name=f"aml_scores_{selected_run_id[:8]}_filtered.csv",
+            mime="text/csv",
+            key="aml_download",
+        )
+        # --- Per-entity signal contribution ---
+        st.markdown("---")
+        st.subheader("Signal Contribution — Entity Detail")
+        signal_cols_detail = ["sar_signal", "laundering_signal", "network_signal",
+                              "geo_signal", "volume_signal"]
+        signal_labels = {"sar_signal": "SAR", "laundering_signal": "Laundering",
+                         "network_signal": "Network", "geo_signal": "Geo",
+                         "volume_signal": "Volume"}
+        signal_colors_map = {"SAR": "#EF4444", "Laundering": "#F59E0B",
+                             "Network": "#8B5CF6", "Geo": "#3B82F6", "Volume": "#22C55E"}
+
+        entity_options = df_display["entity_id"].head(50).tolist()
+        if entity_options:
+            selected_entity = st.selectbox(
+                "Select entity to inspect",
+                options=entity_options,
+                key="aml_entity_detail",
+            )
+            entity_row = df[df["entity_id"] == selected_entity].iloc[0]
+
+            detail_vals = []
+            detail_labels = []
+            detail_colors = []
+            for sc in signal_cols_detail:
+                if sc in entity_row.index:
+                    val = float(entity_row[sc])
+                    label = signal_labels[sc]
+                    detail_vals.append(val)
+                    detail_labels.append(label)
+                    detail_colors.append(signal_colors_map.get(label, "#6B7280"))
+
+            if detail_vals:
+                fig_bar = go.Figure(go.Bar(
+                    x=detail_labels,
+                    y=detail_vals,
+                    marker_color=detail_colors,
+                    text=[f"{v:.3f}" for v in detail_vals],
+                    textposition="outside",
+                ))
+                apply_modern_terminal_plotly()
+                fig_bar.update_layout(
+                    height=300,
+                    margin=dict(l=40, r=20, t=30, b=40),
+                    yaxis=dict(range=[0, 1.15], title="Signal Strength"),
+                    xaxis=dict(title=""),
+                )
+                col_chart, col_info = st.columns([2, 1])
+                with col_chart:
+                    st.plotly_chart(fig_bar, width="stretch")
+                with col_info:
+                    st.markdown(f"**Entity:** `{selected_entity}`")
+                    st.markdown(f"**AML Score:** {entity_row.get('aml_score', 0):.1f}")
+                    st.markdown(f"**Band:** {entity_row.get('risk_band', 'N/A')}")
+                    st.markdown(f"**SAR:** {'Yes' if entity_row.get('is_sar', 0) else 'No'}")
+                    st.markdown(f"**Degree:** {int(entity_row.get('degree', 0))}")
+                    reasons = entity_row.get("reasons", "")
+                    if reasons:
+                        st.markdown("**Reasons:**")
+                        for r in str(reasons).split(", "):
+                            st.markdown(f"- `{r}`")
+    else:
+        st.info("No entities match the current filters.")
+
+    # --- Score distribution histogram ---
+    if rows and len(rows) > 5:
+        st.markdown("---")
+        st.subheader("AML Score Distribution")
+        df_chart = pd.DataFrame(rows)
+        if "aml_score" in df_chart.columns and "risk_band" in df_chart.columns:
+            fig = px.histogram(
+                df_chart,
+                x="aml_score",
+                color="risk_band",
+                nbins=50,
+                color_discrete_map=band_colors,
+                labels={"aml_score": "AML Score", "risk_band": "Risk Band"},
+            )
+            apply_modern_terminal_plotly()
+            fig.update_layout(
+                height=340,
+                margin=dict(l=40, r=20, t=30, b=40),
+                barmode="overlay",
+                legend=dict(orientation="h", y=1.08),
+            )
+            fig.update_traces(opacity=0.75)
+            st.plotly_chart(fig, width="stretch")
+
+    # --- Signal radar chart for top entities ---
+    if rows and len(rows) > 0:
+        st.markdown("---")
+        st.subheader("Signal Breakdown — Top Entities")
+
+        signal_cols = ["sar_signal", "laundering_signal", "network_signal",
+                       "geo_signal", "volume_signal"]
+        df_radar = pd.DataFrame(rows[:10])  # top 10 by current sort
+
+        if all(c in df_radar.columns for c in signal_cols):
+            fig_radar = go.Figure()
+            categories = ["SAR", "Laundering", "Network", "Geo", "Volume"]
+
+            for _, row in df_radar.head(5).iterrows():
+                values = [row[c] for c in signal_cols]
+                values.append(values[0])  # close the radar
+                eid = str(row.get("entity_id", "?"))[:12]
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=values,
+                    theta=categories + [categories[0]],
+                    name=eid,
+                    fill="toself",
+                    opacity=0.5,
+                ))
+
+            apply_modern_terminal_plotly()
+            fig_radar.update_layout(
+                polar=dict(
+                    radialaxis=dict(visible=True, range=[0, 1]),
+                    bgcolor="rgba(0,0,0,0)",
+                ),
+                height=420,
+                margin=dict(l=60, r=60, t=40, b=40),
+                legend=dict(orientation="h", y=-0.15),
+            )
+            st.plotly_chart(fig_radar, width="stretch")
+
+
 # --- Main ---
 
 def main():
@@ -2458,8 +3430,10 @@ def main():
     render_sidebar()
 
     # Tab navigation
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "🚀 Run", "📊 Status", "📈 Dashboard", "🔬 Analytics", "📄 Report", "🎛 Interactive",
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+        "🚀 Run", "📊 Status", "📈 Dashboard", "🔬 Analytics",
+        "📄 Report", "🎛 Interactive", "⚡ Tier Queue", "🧩 Cases",
+        "🎯 AML Scores",
     ])
 
     with tab1:
@@ -2479,6 +3453,15 @@ def main():
 
     with tab6:
         render_interactive_dashboard_tab()
+
+    with tab7:
+        render_tier_queue_tab()
+
+    with tab8:
+        render_cases_tab()
+
+    with tab9:
+        render_aml_scores_tab()
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@ from datetime import datetime
 from typing import Optional, List
 from pathlib import Path
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -99,7 +101,7 @@ class ProfileInfo(BaseModel):
 
 # API Endpoints
 @router.get("/profiles")
-async def get_run_profiles():
+def get_run_profiles():
     """
     Get available run profiles with their configurations.
 
@@ -121,7 +123,7 @@ async def get_run_profiles():
 
 
 @router.post("/", response_model=CreateRunResponse)
-async def create_run(
+def create_run(
     params: RunParams = RunParams(),
     db: Session = Depends(get_db),
 ):
@@ -178,7 +180,7 @@ async def create_run(
 
 
 @router.get("/", response_model=List[RunResponse])
-async def list_runs(
+def list_runs(
     limit: int = 20,
     offset: int = 0,
     status: Optional[str] = None,
@@ -210,7 +212,7 @@ async def list_runs(
 
 
 @router.get("/{run_id}", response_model=RunResponse)
-async def get_run(run_id: str, db: Session = Depends(get_db)):
+def get_run(run_id: str, db: Session = Depends(get_db)):
     """
     Get details of a specific pipeline run.
 
@@ -225,7 +227,7 @@ async def get_run(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{run_id}/metrics")
-async def get_run_metrics(run_id: str, db: Session = Depends(get_db)):
+def get_run_metrics(run_id: str, db: Session = Depends(get_db)):
     """
     Get metrics for a specific run.
 
@@ -251,7 +253,7 @@ async def get_run_metrics(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{run_id}/artifact-index")
-async def get_artifact_index(run_id: str, db: Session = Depends(get_db)):
+def get_artifact_index(run_id: str, db: Session = Depends(get_db)):
     """
     Get the artifact index for a run.
 
@@ -287,7 +289,7 @@ async def get_artifact_index(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{run_id}/paths")
-async def get_run_paths(run_id: str, db: Session = Depends(get_db)):
+def get_run_paths(run_id: str, db: Session = Depends(get_db)):
     """
     Get explicit artifact paths for a run.
 
@@ -348,7 +350,7 @@ async def get_run_paths(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{run_id}/cancel")
-async def cancel_run(run_id: str, db: Session = Depends(get_db)):
+def cancel_run(run_id: str, db: Session = Depends(get_db)):
     """
     Cancel a running pipeline.
 
@@ -382,7 +384,7 @@ async def cancel_run(run_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/{run_id}")
-async def delete_run(run_id: str, db: Session = Depends(get_db)):
+def delete_run(run_id: str, db: Session = Depends(get_db)):
     """
     Delete a pipeline run and its metadata.
 
@@ -404,3 +406,445 @@ async def delete_run(run_id: str, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": f"Run {run_id} deleted"}
+
+
+# --- Risk Queue Endpoints ---
+
+
+@router.get("/{run_id}/risk-summary")
+def get_risk_summary(run_id: str, db: Session = Depends(get_db)):
+    """Return the queue_summary.json for a completed run."""
+    import json as _json
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    summary_path = artifact_dir / "queues" / "queue_summary.json"
+
+    if not summary_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Risk queue not built for this run. Re-run the pipeline or build manually.",
+        )
+
+    with open(summary_path) as f:
+        summary = _json.load(f)
+
+    return summary
+
+
+@router.get("/{run_id}/risk-queue")
+def get_risk_queue(
+    run_id: str,
+    limit: int = 200,
+    offset: int = 0,
+    tier: Optional[List[str]] = None,
+    entity_type: Optional[List[str]] = None,
+    is_sar: Optional[int] = None,
+    search: Optional[str] = None,
+    max_percentile: Optional[float] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Return paginated, filtered rows from the risk queue.
+
+    Query params:
+        limit / offset — pagination
+        tier — repeated param, e.g. ?tier=T1&tier=T2
+        entity_type — repeated param filter
+        is_sar — 0 or 1
+        search — substring match on entity_id
+        max_percentile — capacity filter (top X%)
+    """
+    import pandas as pd
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    queue_parquet = artifact_dir / "queues" / "risk_queue.parquet"
+    queue_csv = artifact_dir / "queues" / "risk_queue.csv"
+
+    if queue_parquet.exists():
+        df = pd.read_parquet(queue_parquet)
+    elif queue_csv.exists():
+        df = pd.read_csv(queue_csv)
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Risk queue not built for this run.",
+        )
+
+    # ── Server-side filters ──
+
+    # Capacity filter first (top X%)
+    if max_percentile is not None:
+        df = df[df["percentile"] <= max_percentile]
+
+    # Tier filter
+    if tier:
+        df = df[df["tier"].isin(tier)]
+
+    # Entity type filter
+    if entity_type:
+        df = df[df["entity_type"].astype(str).isin(entity_type)]
+
+    # SAR filter
+    if is_sar is not None:
+        df = df[df["is_sar"] == is_sar]
+
+    # Search
+    if search:
+        df = df[df["entity_id"].str.contains(search, case=False, na=False)]
+
+    total = len(df)
+    rows = df.iloc[offset : offset + limit]
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "rows": rows.to_dict(orient="records"),
+    }
+
+
+# --- Operating Point Endpoints ---
+
+
+class OperatingPointPayload(BaseModel):
+    """Schema for saving an operating point configuration."""
+    top_percent: float = Field(..., gt=0, le=100)
+    tiers: List[str] = Field(..., min_length=1)
+    entity_types: List[str] = Field(default_factory=list)
+    sar_filter: str = Field(default="All")
+    search: str = Field(default="")
+
+
+@router.post("/{run_id}/operating-point")
+def save_operating_point(
+    run_id: str,
+    payload: OperatingPointPayload,
+    db: Session = Depends(get_db),
+):
+    """Save an operating point configuration for a run."""
+    import json as _json
+
+    # Validate tiers
+    valid_tiers = {"T1", "T2", "T3", "T4"}
+    invalid = set(payload.tiers) - valid_tiers
+    if invalid:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid tier values: {invalid}. Must be one of {valid_tiers}",
+        )
+
+    # Validate sar_filter
+    valid_sar = {"All", "SAR Only", "Non-SAR"}
+    if payload.sar_filter not in valid_sar:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid sar_filter: '{payload.sar_filter}'. Must be one of {valid_sar}",
+        )
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    queues_dir = artifact_dir / "queues"
+    queues_dir.mkdir(parents=True, exist_ok=True)
+
+    operating_point = {
+        "run_id": run_id,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "payload": payload.model_dump(),
+    }
+
+    op_path = queues_dir / "operating_point.json"
+    with open(op_path, "w") as f:
+        _json.dump(operating_point, f, indent=2)
+
+    logger.info(f"Saved operating point for run {run_id}")
+    return operating_point
+
+
+@router.get("/{run_id}/operating-point")
+def get_operating_point(run_id: str, db: Session = Depends(get_db)):
+    """Load the saved operating point for a run."""
+    import json as _json
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    op_path = artifact_dir / "queues" / "operating_point.json"
+
+    if not op_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="No operating point saved for this run.",
+        )
+
+    with open(op_path) as f:
+        return _json.load(f)
+
+
+# --- Case Endpoints (Phase B) ---
+
+
+@router.get("/{run_id}/cases/summary")
+def get_cases_summary(run_id: str, db: Session = Depends(get_db)):
+    """Return case_summary.json for a completed run."""
+    import json as _json
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    summary_path = artifact_dir / "cases" / "case_summary.json"
+
+    if not summary_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Cases not built for this run.",
+        )
+
+    with open(summary_path) as f:
+        return _json.load(f)
+
+
+@router.get("/{run_id}/cases/{case_id}")
+def get_case_detail(run_id: str, case_id: str, db: Session = Depends(get_db)):
+    """Return a single case JSON by case_id."""
+    import json as _json
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    case_path = artifact_dir / "cases" / f"case_{case_id}.json"
+
+    if not case_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Case not found: {case_id}",
+        )
+
+    with open(case_path) as f:
+        return _json.load(f)
+
+
+@router.get("/{run_id}/cases")
+def list_cases(
+    run_id: str,
+    tier: Optional[List[str]] = None,
+    typology: Optional[List[str]] = None,
+    min_entities: Optional[int] = None,
+    limit: int = 100,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    """
+    Return paginated, filtered list of cases from the case index.
+
+    Query params:
+        tier — repeated param filter (e.g. ?tier=T1&tier=T2)
+        typology — repeated param filter (e.g. ?typology=FAN_OUT&typology=SAR_PROXIMITY)
+        min_entities — minimum entity count
+        limit / offset — pagination
+    """
+    import pandas as _pd
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    index_path = artifact_dir / "cases" / "case_index.parquet"
+    index_csv = artifact_dir / "cases" / "case_index.csv"
+
+    if index_path.exists():
+        df = _pd.read_parquet(index_path)
+    elif index_csv.exists():
+        df = _pd.read_csv(index_csv)
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Cases not built for this run.",
+        )
+
+    # Filters
+    if tier:
+        df = df[df["tier"].isin(tier)]
+
+    if typology:
+        mask = df["typologies"].apply(
+            lambda t: any(typ in str(t) for typ in typology)
+        )
+        df = df[mask]
+
+    if min_entities is not None:
+        df = df[df["entity_count"] >= min_entities]
+
+    total = len(df)
+    rows = df.iloc[offset: offset + limit]
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "cases": rows.to_dict(orient="records"),
+    }
+
+
+# --- AML Score Endpoints (Phase B) ---
+
+
+@router.get("/{run_id}/aml-summary")
+def get_aml_summary(run_id: str, db: Session = Depends(get_db)):
+    """Return aml_score_summary.json for a completed run."""
+    import json as _json
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    summary_path = artifact_dir / "queues" / "aml_score_summary.json"
+
+    if not summary_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="AML scores not computed for this run.",
+        )
+
+    with open(summary_path) as f:
+        return _json.load(f)
+
+
+@router.get("/{run_id}/aml-scores")
+def get_aml_scores(
+    run_id: str,
+    limit: int = 200,
+    offset: int = 0,
+    band: Optional[List[str]] = None,
+    min_score: Optional[float] = None,
+    max_score: Optional[float] = None,
+    is_sar: Optional[int] = None,
+    has_laundering: Optional[int] = None,
+    search: Optional[str] = None,
+    sort_by: str = "aml_score",
+    sort_order: str = "desc",
+    db: Session = Depends(get_db),
+):
+    """
+    Return paginated, filtered AML scores.
+
+    Query params:
+        limit / offset — pagination
+        band — repeated param, e.g. ?band=Critical&band=High
+        min_score / max_score — score range filter
+        is_sar — 0 or 1
+        has_laundering — 1 to show only entities with laundering transactions
+        search — substring match on entity_id
+        sort_by — column to sort (default: aml_score)
+        sort_order — asc or desc (default: desc)
+    """
+    import pandas as _pd
+
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+    scores_parquet = artifact_dir / "queues" / "party_aml_scores.parquet"
+    scores_csv = artifact_dir / "queues" / "party_aml_scores.csv"
+
+    if scores_parquet.exists():
+        df = _pd.read_parquet(scores_parquet)
+    elif scores_csv.exists():
+        df = _pd.read_csv(scores_csv)
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="AML scores not computed for this run.",
+        )
+
+    # Filters
+    if band:
+        df = df[df["risk_band"].isin(band)]
+
+    if min_score is not None:
+        df = df[df["aml_score"] >= min_score]
+
+    if max_score is not None:
+        df = df[df["aml_score"] <= max_score]
+
+    if is_sar is not None:
+        df = df[df["is_sar"] == is_sar]
+
+    if has_laundering is not None and has_laundering == 1:
+        if "laundering_txn_count" in df.columns:
+            df = df[df["laundering_txn_count"] > 0]
+
+    if search:
+        df = df[df["entity_id"].astype(str).str.contains(search, case=False, na=False)]
+
+    # Sort
+    if sort_by in df.columns:
+        ascending = sort_order.lower() == "asc"
+        df = df.sort_values(sort_by, ascending=ascending)
+
+    total = len(df)
+    rows = df.iloc[offset: offset + limit]
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "rows": rows.to_dict(orient="records"),
+    }
+
+
+@router.post("/{run_id}/aml-scores/compute")
+def compute_aml_scores_endpoint(
+    run_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Compute (or recompute) AML scores for a completed run.
+
+    This runs the AML scoring pipeline independently of the main pipeline.
+    Results are stored in ``queues/party_aml_scores.parquet``,
+    ``queues/party_aml_scores.csv``, and ``queues/aml_score_summary.json``.
+    """
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    artifact_dir = _resolve_artifact_dir(run)
+
+    # Verify prerequisite: risk queue must exist
+    queue_parquet = artifact_dir / "queues" / "risk_queue.parquet"
+    queue_csv = artifact_dir / "queues" / "risk_queue.csv"
+    if not queue_parquet.exists() and not queue_csv.exists():
+        raise HTTPException(
+            status_code=400,
+            detail="Risk queue not found. Run the main pipeline first to produce the risk queue.",
+        )
+
+    try:
+        from app.pipeline_runner.aml_scoring import run_aml_scoring
+        summary = run_aml_scoring(artifact_dir)
+    except Exception as exc:
+        logger.error(f"AML scoring failed for run {run_id}: {exc}")
+        raise HTTPException(status_code=500, detail=f"AML scoring failed: {exc}")
+
+    logger.info(f"AML scoring computed on-demand for run {run_id}")
+    return summary
