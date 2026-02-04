@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AML Detection Pipeline — Infographic</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e17;
+  --bg-card: #111827;
+  --bg-card-alt: #0f172a;
+  --bg-elevated: #1e293b;
+  --accent-cyan: #06b6d4;
+  --accent-cyan-dim: rgba(6, 182, 212, 0.15);
+  --accent-amber: #f59e0b;
+  --accent-amber-dim: rgba(245, 158, 11, 0.12);
+  --accent-red: #ef4444;
+  --accent-red-dim: rgba(239, 68, 68, 0.12);
+  --accent-emerald: #10b981;
+  --accent-emerald-dim: rgba(16, 185, 129, 0.12);
+  --accent-violet: #8b5cf6;
+  --accent-violet-dim: rgba(139, 92, 246, 0.12);
+  --accent-rose: #f43f5e;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --border: rgba(148, 163, 184, 0.08);
+  --glow-cyan: 0 0 30px rgba(6, 182, 212, 0.3);
+  --glow-amber: 0 0 30px rgba(245, 158, 11, 0.2);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-wrapper {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 32px 80px;
+}
+
+/* ── HERO HEADER ── */
+.hero {
+  text-align: center;
+  padding: 60px 0 50px;
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; left: 50%; transform: translateX(-50%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-cyan-dim);
+  border: 1px solid rgba(6,182,212,0.25);
+  border-radius: 100px;
+  padding: 6px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  animation: fadeDown 0.8s ease;
+}
+
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  animation: pulse 2s ease infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(6,182,212,0.5); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(6,182,212,0); }
+}
+
+.hero h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #06b6d4 50%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+  animation: fadeDown 0.8s ease 0.1s both;
+}
+
+.hero-sub {
+  font-size: 18px;
+  color: var(--text-secondary);
+  font-weight: 300;
+  letter-spacing: 0.5px;
+  animation: fadeDown 0.8s ease 0.2s both;
+}
+
+.hero-sub strong {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── TECH STACK RIBBON ── */
+.tech-ribbon {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 30px 0 50px;
+  animation: fadeDown 0.8s ease 0.3s both;
+}
+
+.tech-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+
+.tech-tag:hover {
+  border-color: rgba(6,182,212,0.3);
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-dim);
+}
+
+/* ── SECTION TITLES ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 56px 0 28px;
+}
+
+.section-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg-deep);
+  background: var(--accent-cyan);
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: var(--glow-cyan);
+}
+
+.section-header h2 {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.section-header .line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+
+/* ── ARCHITECTURE OVERVIEW (HERO DIAGRAM) ── */
+.arch-diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.arch-diagram::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-amber), var(--accent-emerald), transparent);
+}
+
+.arch-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  position: relative;
+}
+
+.arch-phase {
+  flex: 1;
+  position: relative;
+  padding: 0 12px;
+}
+
+.arch-phase:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0; height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid var(--text-dim);
+  opacity: 0.4;
+  z-index: 2;
+}
+
+.phase-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+.phase-a .phase-label { color: var(--accent-cyan); background: var(--accent-cyan-dim); }
+.phase-b .phase-label { color: var(--accent-violet); background: var(--accent-violet-dim); }
+.phase-c .phase-label { color: var(--accent-amber); background: var(--accent-amber-dim); }
+.phase-d .phase-label { color: var(--accent-emerald); background: var(--accent-emerald-dim); }
+
+.phase-box {
+  border-radius: 14px;
+  padding: 20px 16px;
+  text-align: center;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.3s ease;
+}
+
+.phase-box:hover { transform: translateY(-3px); }
+
+.phase-a .phase-box { background: linear-gradient(145deg, rgba(6,182,212,0.08), rgba(6,182,212,0.02)); border: 1px solid rgba(6,182,212,0.15); }
+.phase-b .phase-box { background: linear-gradient(145deg, rgba(139,92,246,0.08), rgba(139,92,246,0.02)); border: 1px solid rgba(139,92,246,0.15); }
+.phase-c .phase-box { background: linear-gradient(145deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02)); border: 1px solid rgba(245,158,11,0.15); }
+.phase-d .phase-box { background: linear-gradient(145deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02)); border: 1px solid rgba(16,185,129,0.15); }
+
+.phase-icon {
+  font-size: 32px;
+  margin-bottom: 4px;
+}
+
+.phase-box h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.phase-box .steps {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ── PIPELINE 12 STEPS ── */
+.pipeline-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s ease;
+}
+
+.step-card:hover {
+  border-color: rgba(148,163,184,0.15);
+  transform: translateY(-2px);
+}
+
+.step-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 4px 0 0 4px;
+}
+
+.step-card.phase-a::before { background: var(--accent-cyan); }
+.step-card.phase-b::before { background: var(--accent-violet); }
+.step-card.phase-c::before { background: var(--accent-amber); }
+.step-card.phase-d::before { background: var(--accent-emerald); }
+
+.step-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.step-number {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.step-card.phase-a .step-number { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.step-card.phase-b .step-number { background: var(--accent-violet-dim); color: var(--accent-violet); }
+.step-card.phase-c .step-number { background: var(--accent-amber-dim); color: var(--accent-amber); }
+.step-card.phase-d .step-number { background: var(--accent-emerald-dim); color: var(--accent-emerald); }
+
+.step-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.step-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.step-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meta-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.meta-chip.input { color: var(--accent-cyan); border-color: rgba(6,182,212,0.2); }
+.meta-chip.output { color: var(--accent-emerald); border-color: rgba(16,185,129,0.2); }
+.meta-chip.optional { color: var(--accent-amber); border-color: rgba(245,158,11,0.2); }
+.meta-chip.notebook { color: var(--accent-violet); border-color: rgba(139,92,246,0.2); }
+
+/* ── DATA FLOW SECTION ── */
+.data-flow-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  position: relative;
+}
+
+.data-flow-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent);
+}
+
+.flow-stages {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  justify-content: center;
+}
+
+.flow-node {
+  text-align: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.flow-node-box {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 140px;
+  transition: all 0.3s ease;
+}
+
+.flow-node-box:hover {
+  border-color: rgba(6,182,212,0.3);
+  box-shadow: var(--glow-cyan);
+}
+
+.flow-node-box .icon { font-size: 24px; margin-bottom: 6px; }
+.flow-node-box h4 { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+.flow-node-box p { font-size: 10px; color: var(--text-dim); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  color: var(--text-dim);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* ── SERVICES ARCHITECTURE ── */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.service-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 20px;
+  text-align: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(148,163,184,0.15);
+}
+
+.service-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.service-card h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.service-card .port {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-cyan);
+  margin-bottom: 8px;
+}
+
+.service-card p {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ── STATS ROW ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.stat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.stat-box:hover { transform: translateY(-3px); }
+
+.stat-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+
+.stat-box:nth-child(1)::before { background: var(--accent-cyan); }
+.stat-box:nth-child(2)::before { background: var(--accent-amber); }
+.stat-box:nth-child(3)::before { background: var(--accent-emerald); }
+.stat-box:nth-child(4)::before { background: var(--accent-violet); }
+
+.stat-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.stat-box:nth-child(1) .stat-value { color: var(--accent-cyan); }
+.stat-box:nth-child(2) .stat-value { color: var(--accent-amber); }
+.stat-box:nth-child(3) .stat-value { color: var(--accent-emerald); }
+.stat-box:nth-child(4) .stat-value { color: var(--accent-violet); }
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+
+/* ── PROFILES TABLE ── */
+.profiles-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px;
+  overflow: hidden;
+}
+
+.profile-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.profile-table thead th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 0 16px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-table tbody tr {
+  background: var(--bg-elevated);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.profile-table tbody tr:hover {
+  background: rgba(30,41,59,0.8);
+}
+
+.profile-table tbody td {
+  padding: 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.profile-table tbody td:first-child {
+  border-radius: 10px 0 0 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.profile-table tbody td:last-child {
+  border-radius: 0 10px 10px 0;
+}
+
+.profile-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.profile-badge.quick { background: var(--accent-emerald-dim); color: var(--accent-emerald); }
+.profile-badge.standard { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.profile-badge.heavy { background: var(--accent-amber-dim); color: var(--accent-amber); }
+
+/* ── AML PATTERNS ── */
+.patterns-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.pattern-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.pattern-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(239,68,68,0.3);
+}
+
+.pattern-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent-red);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pattern-card:hover::after { opacity: 1; }
+
+.pattern-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.pattern-card h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.pattern-card p {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+/* ── OUTPUTS SECTION ── */
+.outputs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.output-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.3s ease;
+}
+
+.output-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(148,163,184,0.15);
+}
+
+.output-card .icon-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.output-card .icon-row span:first-child { font-size: 24px; }
+
+.output-card .icon-row h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.output-list {
+  list-style: none;
+}
+
+.output-list li {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.output-list li::before {
+  content: '›';
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.output-list li:last-child { border-bottom: none; }
+
+/* ── API ENDPOINTS ── */
+.api-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.api-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  transition: all 0.3s ease;
+}
+
+.api-row:hover {
+  border-color: rgba(148,163,184,0.15);
+}
+
+.api-method {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  width: 42px;
+  text-align: center;
+}
+
+.api-method.get { background: var(--accent-emerald-dim); color: var(--accent-emerald); }
+.api-method.post { background: var(--accent-amber-dim); color: var(--accent-amber); }
+
+.api-path {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.api-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: auto;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── QUICKSTART ── */
+.quickstart-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.quickstart-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-emerald), var(--accent-cyan));
+}
+
+.qs-steps {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.qs-step {
+  text-align: center;
+  position: relative;
+}
+
+.qs-step:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  right: -12px;
+  top: 22px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.qs-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent-emerald);
+  margin-bottom: 8px;
+}
+
+.qs-icon { font-size: 28px; margin-bottom: 6px; }
+
+.qs-step p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.qs-step code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-dim);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ── DASHBOARD TABS ── */
+.tabs-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.tab-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  cursor: default;
+}
+
+.tab-chip:hover {
+  border-color: rgba(6,182,212,0.3);
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-dim);
+}
+
+.tab-chip .t-icon { font-size: 14px; }
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center;
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 1px solid var(--border);
+}
+
+.footer p {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.footer .repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-cyan);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  text-decoration: none;
+  margin-top: 12px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(6,182,212,0.25);
+  background: var(--accent-cyan-dim);
+  transition: all 0.3s ease;
+}
+
+.footer .repo-link:hover {
+  background: rgba(6,182,212,0.2);
+  box-shadow: var(--glow-cyan);
+}
+
+/* ── SYS REQ GRID ── */
+.sysreq-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.sysreq-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+}
+
+.sysreq-box h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.req-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.req-item:last-child { border-bottom: none; }
+
+.req-item .r-icon { font-size: 18px; flex-shrink: 0; }
+
+.req-item .r-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.req-item .r-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-left: auto;
+  text-align: right;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .hero h1 { font-size: 32px; }
+  .arch-flow { flex-direction: column; gap: 16px; }
+  .arch-phase:not(:last-child)::after { display: none; }
+  .pipeline-grid { grid-template-columns: 1fr; }
+  .services-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .patterns-grid { grid-template-columns: repeat(2, 1fr); }
+  .outputs-grid { grid-template-columns: 1fr; }
+  .api-grid { grid-template-columns: 1fr; }
+  .qs-steps { grid-template-columns: 1fr; }
+  .qs-step:not(:last-child)::after { display: none; }
+  .sysreq-grid { grid-template-columns: 1fr; }
+  .flow-stages { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ═══════════════════ HERO ═══════════════════ -->
+  <header class="hero">
+    <div class="hero-badge"><span class="dot"></span> AML Detection Pipeline v3</div>
+    <h1>Anti-Money Laundering<br>End-to-End Detection System</h1>
+    <p class="hero-sub"><strong>Graph Embeddings</strong> + <strong>GAN Anomaly Detection</strong> — A 12-step automated pipeline from raw transactions to actionable risk intelligence</p>
+  </header>
+
+  <!-- Tech Ribbon -->
+  <div class="tech-ribbon">
+    <span class="tech-tag">Node2Vec</span>
+    <span class="tech-tag">TensorFlow</span>
+    <span class="tech-tag">StellarGraph</span>
+    <span class="tech-tag">PySpark</span>
+    <span class="tech-tag">FastAPI</span>
+    <span class="tech-tag">Celery</span>
+    <span class="tech-tag">Redis</span>
+    <span class="tech-tag">Streamlit</span>
+    <span class="tech-tag">Papermill</span>
+    <span class="tech-tag">Jupyter</span>
+  </div>
+
+  <!-- ═══════════════════ KEY STATS ═══════════════════ -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-value">12</div>
+      <div class="stat-label">Pipeline Steps</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">9.5M</div>
+      <div class="stat-label">Transaction Rows (Demo)</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">32</div>
+      <div class="stat-label">Embedding Dimensions</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value">4</div>
+      <div class="stat-label">AML Patterns Detected</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ ARCHITECTURE OVERVIEW ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Architecture Overview</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-flow">
+      <div class="arch-phase phase-a">
+        <div class="phase-label">Phase A · Ingestion</div>
+        <div class="phase-box">
+          <div class="phase-icon">📊</div>
+          <h3>Data Ingestion &<br>Graph Construction</h3>
+          <div class="steps">Steps 1 – 2</div>
+        </div>
+      </div>
+      <div class="arch-phase phase-b">
+        <div class="phase-label">Phase B · Embeddings</div>
+        <div class="phase-box">
+          <div class="phase-icon">🕸️</div>
+          <h3>Graph Embedding<br>Generation</h3>
+          <div class="steps">Steps 3 – 5</div>
+        </div>
+      </div>
+      <div class="arch-phase phase-c">
+        <div class="phase-label">Phase C · Model</div>
+        <div class="phase-box">
+          <div class="phase-icon">🧠</div>
+          <h3>GAN Anomaly<br>Detection Model</h3>
+          <div class="steps">Steps 6 – 8</div>
+        </div>
+      </div>
+      <div class="arch-phase phase-d">
+        <div class="phase-label">Phase D · Output</div>
+        <div class="phase-box">
+          <div class="phase-icon">📈</div>
+          <h3>Inference &<br>Visualization</h3>
+          <div class="steps">Steps 9 – 12</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ DATA FLOW ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>Data Flow</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="data-flow-panel">
+    <div class="flow-stages">
+      <div class="flow-node">
+        <div class="flow-node-box">
+          <div class="icon">📁</div>
+          <h4>Raw CSV Data</h4>
+          <p>transactions.csv<br>party.csv<br>alerts.csv</p>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-node-box">
+          <div class="icon">⚙️</div>
+          <h4>Feature Groups</h4>
+          <p>edges_td.csv<br>node_td.csv</p>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-node-box">
+          <div class="icon">🔮</div>
+          <h4>Node Embeddings</h4>
+          <p>32-dim vectors<br>.parquet</p>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-node-box">
+          <div class="icon">🎯</div>
+          <h4>Anomaly Scores</h4>
+          <p>predictions<br>thresholds</p>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="flow-node-box">
+          <div class="icon">🏛️</div>
+          <h4>Risk Intelligence</h4>
+          <p>cases, queues<br>reports, plots</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ 12 PIPELINE STEPS ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>12-Step Pipeline</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="pipeline-grid">
+    <!-- Phase A -->
+    <div class="step-card phase-a">
+      <div class="step-top">
+        <div class="step-number">01</div>
+        <div class="step-title">Create Feature Groups</div>
+      </div>
+      <div class="step-desc">PySpark feature engineering — encode transaction types and build graph edge list from raw CSV data.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 1_create_feature_groups</span>
+        <span class="meta-chip output">→ edges_td.csv, node_td.csv</span>
+      </div>
+    </div>
+    <div class="step-card phase-a">
+      <div class="step-top">
+        <div class="step-number">02</div>
+        <div class="step-title">Prepare Embedding Dataset</div>
+      </div>
+      <div class="step-desc">Format and clean graph edges for Node2Vec embedding training input.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 2_prep_training_dataset</span>
+        <span class="meta-chip input">edges_td.csv</span>
+        <span class="meta-chip output">→ cleaned edge list</span>
+      </div>
+    </div>
+
+    <!-- Phase B -->
+    <div class="step-card phase-b">
+      <div class="step-top">
+        <div class="step-number">03</div>
+        <div class="step-title">Embedding HP Tuning</div>
+      </div>
+      <div class="step-desc">Search walk_length, walk_number, embedding_size, p, q parameters using Maggy framework.</div>
+      <div class="step-meta">
+        <span class="meta-chip optional">⚡ optional</span>
+        <span class="meta-chip notebook">nb: 3_maggy_node_embeddings</span>
+        <span class="meta-chip output">→ best_hp.json</span>
+      </div>
+    </div>
+    <div class="step-card phase-b">
+      <div class="step-top">
+        <div class="step-number">04</div>
+        <div class="step-title">Compute Node Embeddings</div>
+      </div>
+      <div class="step-desc">Biased random walks via Node2Vec → Word2Vec training. Captures structural patterns in the transaction network.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 4_compute_node_embeddings</span>
+        <span class="meta-chip output">→ 32-dim embedding per node</span>
+      </div>
+    </div>
+    <div class="step-card phase-b">
+      <div class="step-top">
+        <div class="step-number">05</div>
+        <div class="step-title">Create Embeddings FG</div>
+      </div>
+      <div class="step-desc">Combine node embeddings with binary SAR labels into a unified feature group for model training.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 5_create_embeddings_fg</span>
+        <span class="meta-chip output">→ embeddings_fg.parquet</span>
+      </div>
+    </div>
+
+    <!-- Phase C -->
+    <div class="step-card phase-c">
+      <div class="step-top">
+        <div class="step-number">06</div>
+        <div class="step-title">Train/Eval Split</div>
+      </div>
+      <div class="step-desc">Split 32-dimensional embeddings and binary labels into training and evaluation sets.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 6_create_anomaly_td</span>
+        <span class="meta-chip output">→ X/y_train.npy, X/y_eval.npy</span>
+      </div>
+    </div>
+    <div class="step-card phase-c">
+      <div class="step-top">
+        <div class="step-number">07</div>
+        <div class="step-title">GAN Hyperparameter Tuning</div>
+      </div>
+      <div class="step-desc">Search latent_dim, n_layers, activation, dropout_rate, and learning rate for the GAN.</div>
+      <div class="step-meta">
+        <span class="meta-chip optional">⚡ optional</span>
+        <span class="meta-chip notebook">nb: 7_maggy_adversarial</span>
+        <span class="meta-chip output">→ gan_best_hp.json</span>
+      </div>
+    </div>
+    <div class="step-card phase-c">
+      <div class="step-top">
+        <div class="step-number">08</div>
+        <div class="step-title">Train GAN Anomaly Detector</div>
+      </div>
+      <div class="step-desc">Train Encoder→Decoder (Autoencoder) + Discriminator. Learn reconstruction threshold from anomaly scores.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 8_train_adversarial_aml</span>
+        <span class="meta-chip output">→ .keras model + threshold.npy</span>
+      </div>
+    </div>
+
+    <!-- Phase D -->
+    <div class="step-card phase-d">
+      <div class="step-top">
+        <div class="step-number">09</div>
+        <div class="step-title">Model Inference Testing</div>
+      </div>
+      <div class="step-desc">Validate model predictions on test nodes before dashboard and report generation.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 9_aml_model_server</span>
+        <span class="meta-chip output">→ anomaly scores + predictions</span>
+      </div>
+    </div>
+    <div class="step-card phase-d">
+      <div class="step-top">
+        <div class="step-number">10</div>
+        <div class="step-title">Visualize Results</div>
+      </div>
+      <div class="step-desc">Generate executive dashboard, anomaly distribution, top anomalies, transaction network, and pattern summary plots.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 10_visualize_results</span>
+        <span class="meta-chip output">→ plots/ (6 PNG files)</span>
+      </div>
+    </div>
+    <div class="step-card phase-d">
+      <div class="step-top">
+        <div class="step-number">11</div>
+        <div class="step-title">Analytical Dashboard</div>
+      </div>
+      <div class="step-desc">Generate a full interactive HTML report with metadata and a portable ZIP bundle for distribution.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 11_analytical_dashboard</span>
+        <span class="meta-chip output">→ report.html + run_bundle.zip</span>
+      </div>
+    </div>
+    <div class="step-card phase-d">
+      <div class="step-top">
+        <div class="step-number">12</div>
+        <div class="step-title">AML Pattern Analysis</div>
+      </div>
+      <div class="step-desc">Detect AML typologies: fan-out, hub, cycle, and structuring patterns. Generate case files and risk queues.</div>
+      <div class="step-meta">
+        <span class="meta-chip notebook">nb: 12_aml_pattern_analysis</span>
+        <span class="meta-chip output">→ cases/ + risk_queue.parquet</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ AML PATTERNS ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>AML Typologies Detected</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="patterns-grid">
+    <div class="pattern-card">
+      <div class="pattern-icon">🌊</div>
+      <h4>Fan-Out</h4>
+      <p>Single source distributing funds to many destinations to obscure the trail</p>
+    </div>
+    <div class="pattern-card">
+      <div class="pattern-icon">🕳️</div>
+      <h4>Hub</h4>
+      <p>High-degree intermediary nodes acting as money laundering chokepoints</p>
+    </div>
+    <div class="pattern-card">
+      <div class="pattern-icon">🔄</div>
+      <h4>Cycle</h4>
+      <p>Circular money flows that return funds to origin through layered transfers</p>
+    </div>
+    <div class="pattern-card">
+      <div class="pattern-icon">📐</div>
+      <h4>Structuring</h4>
+      <p>Frequent small transfers below reporting thresholds to avoid detection</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ SERVICE ARCHITECTURE ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Service Architecture</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="service-icon">🗄️</div>
+      <h4>Redis Server</h4>
+      <div class="port">:6379</div>
+      <p>Message broker for Celery task queue and inter-service communication</p>
+    </div>
+    <div class="service-card">
+      <div class="service-icon">⚡</div>
+      <h4>FastAPI</h4>
+      <div class="port">:8000</div>
+      <p>REST API layer — run management, status, artifacts, and health endpoints</p>
+    </div>
+    <div class="service-card">
+      <div class="service-icon">🔧</div>
+      <h4>Celery Worker</h4>
+      <div class="port">background</div>
+      <p>Async notebook execution via Papermill — runs all 12 pipeline steps</p>
+    </div>
+    <div class="service-card">
+      <div class="service-icon">🖥️</div>
+      <h4>Streamlit UI</h4>
+      <div class="port">:8501</div>
+      <p>Web dashboard — 8 tabs for run control, monitoring, analytics, and cases</p>
+    </div>
+  </div>
+
+  <!-- Dashboard Tabs -->
+  <div class="tabs-row">
+    <div class="tab-chip"><span class="t-icon">🚀</span> Run</div>
+    <div class="tab-chip"><span class="t-icon">📊</span> Status</div>
+    <div class="tab-chip"><span class="t-icon">📈</span> Dashboard</div>
+    <div class="tab-chip"><span class="t-icon">🔬</span> Analytics</div>
+    <div class="tab-chip"><span class="t-icon">📄</span> Report</div>
+    <div class="tab-chip"><span class="t-icon">🎛️</span> Interactive</div>
+    <div class="tab-chip"><span class="t-icon">⚖️</span> Queue</div>
+    <div class="tab-chip"><span class="t-icon">🗂️</span> Cases</div>
+  </div>
+
+  <!-- ═══════════════════ RUN PROFILES ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <h2>Run Profiles</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="profiles-panel">
+    <table class="profile-table">
+      <thead>
+        <tr>
+          <th>Profile</th>
+          <th>Sample Size</th>
+          <th>Epochs</th>
+          <th>Threshold</th>
+          <th>Best For</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="profile-badge quick">quick</span></td>
+          <td>5,000 nodes</td>
+          <td>2</td>
+          <td>0.99</td>
+          <td>Testing & demos — fastest turnaround</td>
+        </tr>
+        <tr>
+          <td><span class="profile-badge standard">standard</span></td>
+          <td>20,000 nodes</td>
+          <td>5</td>
+          <td>0.99</td>
+          <td>Normal production runs</td>
+        </tr>
+        <tr>
+          <td><span class="profile-badge heavy">heavy</span></td>
+          <td>100,000 nodes</td>
+          <td>10</td>
+          <td>0.995</td>
+          <td>Full analysis — GPU recommended (12 GB VRAM)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════════ OUTPUTS ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <h2>Output Artifacts</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="outputs-grid">
+    <div class="output-card">
+      <div class="icon-row"><span>📊</span><h4>Data Files</h4></div>
+      <ul class="output-list">
+        <li>edges_td.csv</li>
+        <li>node_td.csv</li>
+        <li>alert_nodes_td.csv</li>
+        <li>node_embeddings_fg.parquet</li>
+      </ul>
+    </div>
+    <div class="output-card">
+      <div class="icon-row"><span>🧠</span><h4>Trained Models</h4></div>
+      <ul class="output-list">
+        <li>anomaly_detector.keras</li>
+        <li>threshold.npy</li>
+        <li>metadata.json</li>
+      </ul>
+    </div>
+    <div class="output-card">
+      <div class="icon-row"><span>📈</span><h4>Visualizations</h4></div>
+      <ul class="output-list">
+        <li>dashboard_executive.png</li>
+        <li>anomaly_distribution.png</li>
+        <li>top_anomalies.png</li>
+        <li>transaction_network.png</li>
+        <li>pattern_summary.png</li>
+      </ul>
+    </div>
+    <div class="output-card">
+      <div class="icon-row"><span>📄</span><h4>Reports</h4></div>
+      <ul class="output-list">
+        <li>report.html</li>
+        <li>report_meta.json</li>
+        <li>run_bundle.zip</li>
+        <li>metrics.json</li>
+      </ul>
+    </div>
+    <div class="output-card">
+      <div class="icon-row"><span>🗂️</span><h4>Case Files</h4></div>
+      <ul class="output-list">
+        <li>case_index.parquet</li>
+        <li>case_summary.json</li>
+        <li>case_&lt;uuid&gt;.json</li>
+      </ul>
+    </div>
+    <div class="output-card">
+      <div class="icon-row"><span>⚖️</span><h4>Risk Queue</h4></div>
+      <ul class="output-list">
+        <li>risk_queue.parquet</li>
+        <li>operating_point.json</li>
+        <li>queue_summary.json</li>
+        <li>artifact_index.json</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ REST API ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <h2>REST API Endpoints</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="api-grid">
+    <div class="api-row">
+      <span class="api-method post">POST</span>
+      <span class="api-path">/runs/</span>
+      <span class="api-desc">Create & start run</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/runs/</span>
+      <span class="api-desc">List all runs</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/runs/{id}</span>
+      <span class="api-desc">Run details</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/runs/{id}/metrics</span>
+      <span class="api-desc">Dashboard metrics</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method post">POST</span>
+      <span class="api-path">/runs/{id}/cancel</span>
+      <span class="api-desc">Cancel pipeline</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/status/health</span>
+      <span class="api-desc">Health check</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/artifacts/{id}/plots</span>
+      <span class="api-desc">Visualizations</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/artifacts/{id}/anomalies</span>
+      <span class="api-desc">Anomaly data</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/artifacts/{id}/report</span>
+      <span class="api-desc">HTML report</span>
+    </div>
+    <div class="api-row">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/artifacts/{id}/bundle</span>
+      <span class="api-desc">Download ZIP</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ SYSTEM REQUIREMENTS ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <h2>System Requirements</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="sysreq-grid">
+    <div class="sysreq-box">
+      <h4>🖥️ Hardware</h4>
+      <div class="req-item">
+        <span class="r-icon">💾</span>
+        <span class="r-label">RAM</span>
+        <span class="r-val">8 GB min · 16 GB recommended</span>
+      </div>
+      <div class="req-item">
+        <span class="r-icon">🎮</span>
+        <span class="r-label">GPU</span>
+        <span class="r-val">Optional · 12 GB VRAM for "heavy"</span>
+      </div>
+      <div class="req-item">
+        <span class="r-icon">💿</span>
+        <span class="r-label">Disk</span>
+        <span class="r-val">5 GB free space</span>
+      </div>
+    </div>
+    <div class="sysreq-box">
+      <h4>🛠️ Software</h4>
+      <div class="req-item">
+        <span class="r-icon">🐧</span>
+        <span class="r-label">OS</span>
+        <span class="r-val">Linux / macOS / WSL2</span>
+      </div>
+      <div class="req-item">
+        <span class="r-icon">🐍</span>
+        <span class="r-label">Python</span>
+        <span class="r-val">3.10 or 3.11</span>
+      </div>
+      <div class="req-item">
+        <span class="r-icon">📦</span>
+        <span class="r-label">Conda</span>
+        <span class="r-val">Miniconda / Anaconda</span>
+      </div>
+      <div class="req-item">
+        <span class="r-icon">🗃️</span>
+        <span class="r-label">Redis</span>
+        <span class="r-val">6.0+</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ QUICKSTART ═══════════════════ -->
+  <div class="section-header">
+    <div class="section-num" style="background: var(--accent-emerald); box-shadow: 0 0 30px rgba(16,185,129,0.3);">★</div>
+    <h2>Quick Start — 5 Steps</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="quickstart-panel">
+    <div class="qs-steps">
+      <div class="qs-step">
+        <div class="qs-num">1</div>
+        <div class="qs-icon">📥</div>
+        <p>Clone repo &<br>checkout branch</p>
+        <code>git clone + checkout v3-enhance</code>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">2</div>
+        <div class="qs-icon">🐍</div>
+        <p>Create conda env<br>& install deps</p>
+        <code>conda create + pip install</code>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">3</div>
+        <div class="qs-icon">🗄️</div>
+        <p>Install Redis<br>& verify setup</p>
+        <code>apt install + make check-env</code>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">4</div>
+        <div class="qs-icon">🚀</div>
+        <p>Start all<br>4 services</p>
+        <code>make run</code>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num">5</div>
+        <div class="qs-icon">🖥️</div>
+        <p>Open UI & run<br>"quick" profile</p>
+        <code>localhost:8501</code>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ FOOTER ═══════════════════ -->
+  <footer class="footer">
+    <p>AML END-TO-END DETECTION SYSTEM · GRAPH EMBEDDINGS + GAN ANOMALY DETECTION</p>
+    <a href="https://github.com/logicalclocks/AMLend2end" class="repo-link" target="_blank">
+      ⬡ github.com/logicalclocks/AMLend2end
+    </a>
+  </footer>
+
+</div>
+
+</body>
+</html>

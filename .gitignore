@@ -8,3 +8,20 @@ dist/
 
 # Original library (credit: https://github.com/logicalclocks/AMLend2end.git)
 adversarialaml/
+
+# Large files and model artifacts
+artifacts/
+models/
+output/
+training_data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Database files
+*.db
+
+# Misc
+=9.3.0
