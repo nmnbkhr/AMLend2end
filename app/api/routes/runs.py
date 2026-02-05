@@ -848,3 +848,67 @@ def compute_aml_scores_endpoint(
 
     logger.info(f"AML scoring computed on-demand for run {run_id}")
     return summary
+
+
+# --- Chart PNG Generation Endpoints (Phase C) ---
+
+
+@router.post("/{run_id}/generate-pngs")
+def trigger_png_generation(run_id: str, db: Session = Depends(get_db)):
+    """
+    Trigger on-demand generation of dashboard chart PNGs.
+
+    Dispatches a Celery task to generate all chart PNGs for the specified run.
+    Returns immediately with the Celery task ID for progress tracking.
+    """
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+
+    if run.status != RunStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot generate PNGs for run with status: {run.status.value}. Must be completed.",
+        )
+
+    try:
+        from ...workers.tasks import generate_chart_pngs_task
+
+        task = generate_chart_pngs_task.delay(run_id)
+
+        return {
+            "message": f"PNG generation started for run {run_id}",
+            "celery_task_id": task.id,
+            "status": "queued",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to queue PNG generation: {str(e)}",
+        )
+
+
+@router.get("/{run_id}/generate-pngs/{task_id}")
+def get_png_generation_status(run_id: str, task_id: str):
+    """
+    Check the status of a PNG generation task.
+
+    Returns current progress including chart name being generated.
+    """
+    from ...workers.celery_app import celery_app
+
+    result = celery_app.AsyncResult(task_id)
+
+    response = {
+        "task_id": task_id,
+        "state": result.state,
+    }
+
+    if result.state == "PROGRESS":
+        response["progress"] = result.info
+    elif result.state == "SUCCESS":
+        response["result"] = result.result
+    elif result.state == "FAILURE":
+        response["error"] = str(result.result)
+
+    return response

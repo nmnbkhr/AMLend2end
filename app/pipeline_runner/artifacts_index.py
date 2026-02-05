@@ -44,6 +44,16 @@ FILE_CATEGORIES = {
         "description": "Bloomberg-styled visualization files",
         "subdirectory": "plots/styled",
     },
+    "dashboard_plots": {
+        "extensions": [".png", ".jpg", ".jpeg", ".svg"],
+        "description": "Dashboard-generated chart files",
+        "subdirectory": "plots/dashboard",
+    },
+    "dashboard_styled_plots": {
+        "extensions": [".png", ".jpg", ".jpeg", ".svg"],
+        "description": "Styled dashboard chart files",
+        "subdirectory": "plots/dashboard/styled",
+    },
     "tables": {
         "extensions": [".csv", ".parquet", ".xlsx", ".tsv"],
         "description": "Data tables",
@@ -92,6 +102,14 @@ def get_file_category(filename: str, relative_path: str = "") -> str:
     Returns:
         Category string
     """
+    # Check if this is a dashboard styled plot
+    if relative_path and "plots/dashboard/styled" in str(relative_path):
+        return "dashboard_styled_plots"
+
+    # Check if this is a dashboard plot
+    if relative_path and "plots/dashboard" in str(relative_path):
+        return "dashboard_plots"
+
     # Check if this is a styled plot (in plots/styled/ directory)
     if relative_path and "plots/styled" in str(relative_path):
         return "styled_plots"

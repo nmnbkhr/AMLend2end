@@ -186,6 +186,13 @@ def run_pipeline_task(self, run_id: str) -> dict:
 
         logger.info(f"Pipeline run completed: {run_id}")
 
+        # Chain chart PNG generation (non-blocking, after COMPLETED status)
+        try:
+            generate_chart_pngs_task.delay(run_id)
+            logger.info(f"Queued chart PNG generation for run {run_id}")
+        except Exception as e:
+            logger.warning(f"Failed to queue chart PNG generation: {e}")
+
         return {
             "run_id": run_id,
             "status": "completed",
@@ -303,3 +310,83 @@ def rebuild_artifact_index(self, run_id: str) -> dict:
     except Exception as e:
         logger.error(f"Failed to rebuild artifact index for run {run_id}: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@celery_app.task(bind=True, name="generate_chart_pngs")
+def generate_chart_pngs_task(self, run_id: str) -> dict:
+    """
+    Generate all dashboard chart PNGs for a completed pipeline run.
+
+    Runs as an independent Celery task after the pipeline completes.
+    Saves PNGs to {run_dir}/plots/dashboard/ with styled versions
+    in {run_dir}/plots/dashboard/styled/.
+    """
+    from pathlib import Path
+    from ..charts.exporter import export_all_charts
+    from ..pipeline_runner.artifacts_index import ArtifactIndexer
+
+    session = get_sync_session()
+
+    try:
+        run = session.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+        if not run:
+            return {"status": "error", "message": f"Run not found: {run_id}"}
+
+        if run.status != RunStatus.COMPLETED:
+            return {"status": "error", "message": f"Run not completed: {run.status.value}"}
+
+        # Resolve artifact directory
+        if run.artifact_path:
+            p = Path(run.artifact_path)
+            if not p.is_absolute():
+                p = (Path(__file__).parent.parent.parent / p).resolve()
+            artifacts_dir = p
+        else:
+            artifacts_dir = Path(__file__).parent.parent.parent / "artifacts" / "runs" / run_id
+
+        if not artifacts_dir.exists():
+            return {"status": "error", "message": f"Artifacts directory not found: {artifacts_dir}"}
+
+        # Progress tracking via Celery state
+        def progress_cb(current, total, chart_name):
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": current,
+                    "total": total,
+                    "chart_name": chart_name,
+                    "percent": round(100.0 * current / total, 1) if total > 0 else 0,
+                },
+            )
+
+        # Generate PNGs
+        result = export_all_charts(
+            artifacts_dir=artifacts_dir,
+            run_id=run_id,
+            progress_callback=progress_cb,
+            theme="bloomberg",
+        )
+
+        # Rebuild artifact index to include new PNGs
+        try:
+            indexer = ArtifactIndexer(artifacts_dir)
+            indexer.build_index()
+        except Exception as e:
+            logger.warning(f"Failed to rebuild artifact index after PNG export: {e}")
+
+        return {
+            "status": "success",
+            "run_id": run_id,
+            **result,
+        }
+
+    except Exception as e:
+        logger.error(f"Chart PNG generation failed for run {run_id}: {e}")
+        return {
+            "status": "error",
+            "run_id": run_id,
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+        }
+    finally:
+        session.close()
